@@ -5,7 +5,7 @@ Utility functions for the Tetris game.
 import pygame
 
 def safe_events():
-    """pygame.event.get() を安全に呼び出し、例外発生時は空リストを返す"""
+    """Safely call ``pygame.event.get()`` and return an empty list on failure."""
     try:
         return pygame.event.get()
     except Exception as e:

@@ -4,10 +4,11 @@ Main entry point for the Tetris game.
 
 import sys
 import os
+import pygame
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT, VSYNC
 from game_manager import GameManager
 from font_manager import cleanup_fonts
-from utils import safe_events  # ← ここを変更
+from utils import safe_events  # safe event getter
 
 def main():
     """Initialize and run the Tetris game."""
