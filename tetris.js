@@ -123,8 +123,11 @@ class GamepadManager {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         this.availableGamepads = [];
         
+        console.log('Updating gamepad list, found', gamepads.length, 'gamepad slots');
+        
         for (let i = 0; i < gamepads.length; i++) {
             if (gamepads[i]) {
+                console.log(`Gamepad ${i}: ${gamepads[i].id}, connected: ${gamepads[i].connected}`);
                 this.availableGamepads.push({
                     index: i,
                     id: gamepads[i].id,
@@ -132,6 +135,8 @@ class GamepadManager {
                 });
             }
         }
+        
+        console.log('Available gamepads after update:', this.availableGamepads.length);
         
         // 切断されたゲームパッドの割り当てを削除
         for (let [gamepadIndex, playerId] of this.assignments.entries()) {
@@ -143,11 +148,24 @@ class GamepadManager {
         }
     }
     
+    forceRefreshGamepads() {
+        // Force a fresh check of gamepads by accessing the API multiple times
+        for (let i = 0; i < 5; i++) {
+            navigator.getGamepads();
+        }
+        this.updateAvailableGamepads();
+    }
+    
     assignGamepadToPlayer(playerId) {
         // 既に割り当てられている場合はスキップ
         if (this.playerAssignments.has(playerId)) {
-            return this.playerAssignments.get(playerId);
+            const existingIndex = this.playerAssignments.get(playerId);
+            console.log(`Player ${playerId} already has gamepad ${existingIndex}`);
+            return existingIndex;
         }
+        
+        // 最新のゲームパッド情報を取得
+        this.updateAvailableGamepads();
         
         // 利用可能な未割り当てのゲームパッドを検索
         for (let gamepadInfo of this.availableGamepads) {
@@ -159,7 +177,8 @@ class GamepadManager {
             }
         }
         
-        console.log(`No available gamepad for Player ${playerId}`);
+        console.log(`No available gamepad for Player ${playerId}. Available gamepads:`, this.availableGamepads.length);
+        console.log(`Current assignments:`, Object.fromEntries(this.assignments));
         return null;
     }
     

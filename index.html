@@ -308,6 +308,8 @@
   <div id="gamepadStatus" class="gamepad-status">
     <strong>コントローラー状況:</strong><br>
     <div id="gamepadList">コントローラーを検索中...</div>
+    <br>
+    <button onclick="manualAssignController()" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">手動割り当て</button>
   </div>
 
   <script src="tetris.js"></script>
@@ -400,6 +402,45 @@
         // Start button test when page loads (コントローラーテスト開始)
         setTimeout(startButtonTest, 2000);
         
+        // Manual controller assignment function
+        window.manualAssignController = function() {
+            console.log('=== Manual Controller Assignment ===');
+            
+            // Force gamepad detection
+            gamepadManager.forceRefreshGamepads();
+            
+            console.log('Available gamepads:', gamepadManager.availableGamepads);
+            console.log('Current assignments:', gamepadManager.getAssignmentInfo());
+            
+            if (gamepadManager.availableGamepads.length === 0) {
+                alert('コントローラーが検出されません。\n\n1. コントローラーが正しく接続されているか確認してください\n2. コントローラーのボタンを押してください\n3. ページをリロードしてください');
+                return;
+            }
+            
+            // Clear all assignments first
+            gamepadManager.assignments.clear();
+            gamepadManager.playerAssignments.clear();
+            
+            // Assign controllers to players 1, 2, 3 in order
+            const playerIds = [1, 2, 3];
+            for (let playerId of playerIds) {
+                const assigned = gamepadManager.assignGamepadToPlayer(playerId);
+                if (assigned !== null) {
+                    console.log(`Successfully assigned gamepad ${assigned} to Player ${playerId}`);
+                } else {
+                    console.log(`Failed to assign gamepad to Player ${playerId}`);
+                    break;
+                }
+            }
+            
+            updateGamepadStatus();
+            console.log('Final assignments:', gamepadManager.getAssignmentInfo());
+            
+            if (Object.keys(gamepadManager.getAssignmentInfo()).length > 0) {
+                alert(`コントローラー割り当て完了！\n割り当てられたコントローラー: ${Object.keys(gamepadManager.getAssignmentInfo()).length}台`);
+            }
+        };
+        
         // Gamepad connection events
         window.addEventListener('gamepadconnected', (e) => {
             console.log('Gamepad connected:', e.gamepad.id, 'at index', e.gamepad.index);
@@ -468,6 +509,22 @@
 
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             gameInstances = []; 
+            
+            // まず利用可能なプレイヤーにコントローラーを自動割り当て
+            const activePlayers = [];
+            playerButtons.forEach((button, index) => {
+                const playerId = index + 1;
+                const mode = button.dataset.mode;
+                if (mode !== 'OFF') {
+                    activePlayers.push(playerId);
+                }
+            });
+            
+            // アクティブなプレイヤーにコントローラーを順番に割り当て
+            console.log('Assigning controllers to active players:', activePlayers);
+            activePlayers.forEach(playerId => {
+                gamepadManager.assignGamepadToPlayer(playerId);
+            });
             
             playerButtons.forEach((button, index) => {
                 const playerId = index + 1;
