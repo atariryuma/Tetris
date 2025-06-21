@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>三人対戦テトリス</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #222;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .player-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 1vw;
+    }
+    canvas {
+      width: 30vw; /* ビューポートに応じた幅 */
+      height: 80vh; /* 高さは16:9の比率で調整 */
+      border: 1px solid #fff;
+    }
+    .score {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .player-toggle {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>三人対戦テトリス</h1>
+  <button id="startButton">ゲームスタート</button>
+  <div class="container">
+    <div class="player-container">
+      <button class="player-toggle" id="togglePlayer1">1P オン/オフ</button>
+      <canvas id="player1Canvas"></canvas>
+    </div>
+    <div class="player-container">
+      <button class="player-toggle" id="togglePlayer2">2P オン/オフ</button>
+      <canvas id="player2Canvas"></canvas>
+    </div>
+    <div class="player-container">
+      <button class="player-toggle" id="togglePlayer3">3P オン/オフ</button>
+      <canvas id="player3Canvas"></canvas>
+    </div>
+  </div>
+  <script src="tetris.js"></script>
+</body>
+</html>
