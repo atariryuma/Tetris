@@ -67,9 +67,10 @@ def run_game():
     print()
     
     try:
-        # Import and run the game
+        # Import and run the game using safe events
         from main import main
-        return main() == 0
+        result = main()
+        return result == 0
     except ImportError as e:
         print(f"✗ Import error: {e}")
         print("Make sure all game files are in the same directory")

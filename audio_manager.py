@@ -228,8 +228,17 @@ class AudioManager:
         return pygame.sndarray.make_sound(arr)
 
     def play_bgm(self, bgm_name: str, loop: bool = True):
-        """Play background music."""
+        """Play background music with robust error handling."""
         if not self.initialized:
+            return
+            
+        # Check if mixer is properly initialized
+        try:
+            if not pygame.mixer.get_init():
+                print(f"Audio mixer not initialized, skipping BGM: {bgm_name}")
+                return
+        except pygame.error:
+            print(f"Cannot check mixer status, skipping BGM: {bgm_name}")
             return
             
         assets_dir = os.path.join(os.path.dirname(__file__), 'assets', 'sounds')
@@ -242,10 +251,17 @@ class AudioManager:
                 pygame.mixer.music.play(-1 if loop else 0)
                 self.current_bgm = bgm_name
                 print(f"Playing BGM: {bgm_name}")
-            except pygame.error as e:
+            except (pygame.error, OSError, IOError) as e:
                 print(f"Failed to play BGM {bgm_name}: {e}")
         else:
-            print(f"BGM file not found: {bgm_path}")
+            # Silent fallback - only warn once per BGM
+            if hasattr(self, '_missing_bgm_warned'):
+                if bgm_name not in self._missing_bgm_warned:
+                    print(f"BGM file not found, continuing without music: {bgm_name}")
+                    self._missing_bgm_warned.add(bgm_name)
+            else:
+                self._missing_bgm_warned = {bgm_name}
+                print(f"BGM file not found, continuing without music: {bgm_name}")
 
     def stop_bgm(self):
         """Stop background music."""

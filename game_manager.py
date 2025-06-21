@@ -12,14 +12,20 @@ from audio_manager import AudioManager
 from ui_renderer import UIRenderer
 from cpu_ai import AdaptiveCPU
 
+# Import safe_events from main module
+from main import safe_events
+
 class GameManager:
     """Main game manager that coordinates all game systems."""
     
-    def __init__(self, screen: pygame.Surface):
+    def __init__(self, screen: pygame.Surface, event_source=None):
         self.screen = screen
         self.clock = pygame.time.Clock()
-        self.running = True
+        self.running = False  # Will be set to True in run()
         self.state = GameState.MENU
+        
+        # Use provided event_source or fall back to pygame.event.get
+        self.event_source = event_source or pygame.event.get
         
         # Initialize systems
         self.gamepad_manager = GamepadManager()
@@ -49,87 +55,85 @@ class GameManager:
         self.audio_manager.play_bgm('menu_music')
     
     def run(self):
-        """Main game loop."""
+        """Main game loop using safe event polling."""
         print("Game started! Use controllers or keyboard to play.")
         print("Controls: Arrow keys to move, Z/X to rotate, ESC to pause")
+        
+        clock = pygame.time.Clock()
+        self.running = True
         
         while self.running:
             current_time = time.time()
             delta_time = current_time - self.last_time
             self.last_time = current_time
             
-            self.handle_events()
-            self.update(delta_time)
-            self.render()
+            # Reset just_pressed keys each frame
+            self.keys_just_pressed = {}
             
-            self.clock.tick(FPS)
+            # Use safe_events to retrieve events
+            for event in self.event_source():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                else:
+                    self.handle_event(event)
+            
+            # Game update and render calls
+            self.update(delta_time)
+            self.draw(self.screen)
+            
+            # Maintain target FPS
+            clock.tick(FPS)
         
         # Cleanup
         self.audio_manager.cleanup()
         pygame.quit()
     
-    def handle_events(self):
-        """Handle pygame events."""
-        self.keys_just_pressed = {}
+    def handle_event(self, event):
+        """Handle a single pygame event."""
+        if event.type == pygame.QUIT:
+            self.running = False
         
-        try:
-            # Get events safely
-            events = []
-            try:
-                events = pygame.event.get()
-            except (pygame.error, SystemError) as e:
-                print(f"Event polling error: {e}")
-                return
+        elif event.type == pygame.KEYDOWN:
+            self.keys_pressed[event.key] = True
+            self.keys_just_pressed[event.key] = True
             
-            for event in events:
-                if event.type == pygame.QUIT:
-                    self.running = False
-                
-                elif event.type == pygame.KEYDOWN:
-                    self.keys_pressed[event.key] = True
-                    self.keys_just_pressed[event.key] = True
-                
-                    # Global shortcuts
-                    if event.key == pygame.K_F1:
-                        print("Volume info:", self.audio_manager.get_volume_info())
-                    elif event.key == pygame.K_F2:
-                        current = self.audio_manager.get_volume_info()
-                        new_volume = min(1.0, current['master'] + 0.1)
-                        self.audio_manager.set_master_volume(new_volume)
-                        print(f"Master volume: {new_volume:.1f}")
-                    elif event.key == pygame.K_F3:
-                        current = self.audio_manager.get_volume_info()
-                        new_volume = max(0.0, current['master'] - 0.1)
-                        self.audio_manager.set_master_volume(new_volume)
-                        print(f"Master volume: {new_volume:.1f}")
-                    
-                    # State-specific shortcuts
-                    elif self.state == GameState.MENU:
-                        self.handle_menu_input(event.key)
-                    elif self.state == GameState.PLAYING:
-                        if event.key == pygame.K_ESCAPE:
-                            self.pause_game()
-                        elif event.key == pygame.K_r:
-                            self.restart_game()
-                    elif self.state == GameState.PAUSED:
-                        if event.key == pygame.K_ESCAPE:
-                            self.resume_game()
-                        elif event.key == pygame.K_r:
-                            self.restart_game()
-                        elif event.key == pygame.K_q:
-                            self.state = GameState.MENU
-                    elif self.state == GameState.GAME_OVER:
-                        if event.key == pygame.K_r:
-                            self.restart_game()
-                        elif event.key == pygame.K_ESCAPE:
-                            self.state = GameState.MENU
+            # Global shortcuts
+            if event.key == pygame.K_F1:
+                print("Volume info:", self.audio_manager.get_volume_info())
+            elif event.key == pygame.K_F2:
+                current = self.audio_manager.get_volume_info()
+                new_volume = min(1.0, current['master'] + 0.1)
+                self.audio_manager.set_master_volume(new_volume)
+                print(f"Master volume: {new_volume:.1f}")
+            elif event.key == pygame.K_F3:
+                current = self.audio_manager.get_volume_info()
+                new_volume = max(0.0, current['master'] - 0.1)
+                self.audio_manager.set_master_volume(new_volume)
+                print(f"Master volume: {new_volume:.1f}")
             
-                elif event.type == pygame.KEYUP:
-                    self.keys_pressed[event.key] = False
-        except pygame.error as e:
-            print(f"Event handling error: {e}")
-            # Continue running even if event handling fails
-            pass
+            # State-specific shortcuts
+            elif self.state == GameState.MENU:
+                self.handle_menu_input(event.key)
+            elif self.state == GameState.PLAYING:
+                if event.key == pygame.K_ESCAPE:
+                    self.pause_game()
+                elif event.key == pygame.K_r:
+                    self.restart_game()
+            elif self.state == GameState.PAUSED:
+                if event.key == pygame.K_ESCAPE:
+                    self.resume_game()
+                elif event.key == pygame.K_r:
+                    self.restart_game()
+                elif event.key == pygame.K_q:
+                    self.state = GameState.MENU
+            elif self.state == GameState.GAME_OVER:
+                if event.key == pygame.K_r:
+                    self.restart_game()
+                elif event.key == pygame.K_ESCAPE:
+                    self.state = GameState.MENU
+        
+        elif event.type == pygame.KEYUP:
+            self.keys_pressed[event.key] = False
     
     def handle_menu_input(self, key: int):
         """Handle menu input."""
@@ -405,9 +409,9 @@ class GameManager:
             self.start_game()
             print("Game restarted")
     
-    def render(self):
-        """Render current state."""
-        self.screen.fill(Colors.BG_PRIMARY)
+    def draw(self, screen):
+        """Draw current state to the screen."""
+        screen.fill(Colors.BG_PRIMARY)
         
         if self.state == GameState.MENU:
             self.ui_renderer.draw_main_menu(self.menu_selection, self.player_modes)
@@ -436,11 +440,11 @@ class GameManager:
         
         # Debug info
         if DEBUG_CONTROLLERS:
-            self.draw_debug_info()
+            self.draw_debug_info(screen)
         
         pygame.display.flip()
     
-    def draw_debug_info(self):
+    def draw_debug_info(self, screen):
         """Draw debug information."""
         debug_y = 10
         font = pygame.font.Font(None, 24)
@@ -449,16 +453,19 @@ class GameManager:
         assignments = self.gamepad_manager.assignment_table
         debug_text = f"Controllers: {len(self.gamepad_manager.joysticks)}, Assignments: {assignments}"
         text_surface = font.render(debug_text, True, Colors.WHITE)
-        self.screen.blit(text_surface, (10, debug_y))
+        screen.blit(text_surface, (10, debug_y))
         debug_y += 25
         
         # Game state
         state_text = f"State: {self.state}, Active players: {self.active_players}"
         text_surface = font.render(state_text, True, Colors.WHITE)
-        self.screen.blit(text_surface, (10, debug_y))
+        screen.blit(text_surface, (10, debug_y))
         debug_y += 25
         
-        # FPS
-        fps_text = f"FPS: {self.clock.get_fps():.1f}"
-        text_surface = font.render(fps_text, True, Colors.WHITE)
-        self.screen.blit(text_surface, (10, debug_y))
+        # FPS - use pygame.time.Clock for FPS calculation
+        try:
+            fps_text = f"FPS: {self.clock.get_fps():.1f}" if hasattr(self, 'clock') else "FPS: N/A"
+            text_surface = font.render(fps_text, True, Colors.WHITE)
+            screen.blit(text_surface, (10, debug_y))
+        except:
+            pass
