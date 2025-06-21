@@ -25,14 +25,23 @@ def main():
     def exists(exe):
         return shutil.which(exe) is not None
 
-    # 1. Try python interpreter (direct)
+    # 1. Try batch launcher
+    if try_command("run_game.bat", "▶ run_game.bat を実行"):  # Windows-specific batch
+        sys.exit(0)
+
+    # 2. Try python interpreter
     if exists("python"):
-        if try_command("python main.py", "▶ python main.py を実行"):
+        if try_command("python main.py", "▶ python main.py を実行"):  # Standard Python
             sys.exit(0)
 
-    # 2. Try py launcher
+    # 3. Try py launcher
     if exists("py"):
-        if try_command("py main.py", "▶ py main.py を実行"):
+        if try_command("py main.py", "▶ py main.py を実行"):  # Python launcher
+            sys.exit(0)
+
+    # 4. (Optional) Try uv if installed
+    if exists("uv"):
+        if try_command("uv run python main.py", "▶ uv run python main.py を実行"):  # Development tool
             sys.exit(0)
 
     # All attempts failed
