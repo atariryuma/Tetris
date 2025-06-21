@@ -465,7 +465,8 @@ function rotate(matrix) {
 }
 
 function flip(matrix) {
-    return matrix.map(row => row.reverse());
+    // Create new rows so the original matrix remains unmodified
+    return matrix.map(row => row.slice().reverse());
 }
 
 function isValidMove(shape, x, y, player) {
