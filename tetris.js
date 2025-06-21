@@ -8,6 +8,13 @@ const ctx3 = canvas3.getContext("2d");
 const blockSize = 32;
 const boardWidth = 10;
 const boardHeight = 20;
+const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
+
+const keyBindings = [
+    { left: 'ArrowLeft', right: 'ArrowRight', down: 'ArrowDown', rotate: 'z', hardDrop: 'ArrowUp', flip: 'x' },
+    { left: 'a', right: 'd', down: 's', rotate: 'w', hardDrop: 'q', flip: 'e' },
+    { left: 'j', right: 'l', down: 'k', rotate: 'i', hardDrop: 'u', flip: 'o' }
+];
 canvas1.width = canvas2.width = canvas3.width = boardWidth * blockSize;
 canvas1.height = canvas2.height = canvas3.height = boardHeight * blockSize;
 
@@ -72,6 +79,9 @@ document.getElementById('togglePlayer3').addEventListener('click', () => {
     toggleCanvasVisibility(canvas3, activePlayers[2]);
 });
 
+// キーボード入力イベントを登録
+document.addEventListener('keydown', handleKeyboardInput);
+
 function toggleCanvasVisibility(canvas, isVisible) {
     canvas.style.display = isVisible ? 'block' : 'none';
 }
@@ -113,7 +123,6 @@ function gameLoop() {
             player.lastDropTime = Date.now();
             if (!moveDown(player)) {
                 const clearedLines = placeShape(player);
-                applySpecialBlockEffects(player);
                 addObstacleBlocks(player, clearedLines);
                 if (resetPlayer(player)) {
                     if (checkGameOver()) {
@@ -159,6 +168,68 @@ function handleControllerInput() {
         const gamepad = gamepads[player.gamepadIndex];
         if (gamepad) {
             player.handleControllerInput(gamepad);
+        }
+    });
+}
+
+// キーボード入力を処理
+function handleKeyboardInput(event) {
+    if (!gameActive) return;
+    players.forEach((player, index) => {
+        if (!activePlayers[index]) return;
+        const binding = keyBindings[index];
+        const last = player.lastInputTime;
+        const key = event.key;
+
+        if (key === binding.hardDrop && Date.now() - last.hardDrop > INPUT_INTERVAL) {
+            player.hardDrop();
+            last.hardDrop = Date.now();
+        } else if (key === binding.left && Date.now() - last.left > INPUT_INTERVAL) {
+            if (isValidMove(player.currentShape.shape, player.currentPosition.x - 1, player.currentPosition.y, player)) {
+                player.currentPosition.x -= 1;
+                last.left = Date.now();
+                player.updateGhostPosition();
+            }
+        } else if (key === binding.right && Date.now() - last.right > INPUT_INTERVAL) {
+            if (isValidMove(player.currentShape.shape, player.currentPosition.x + 1, player.currentPosition.y, player)) {
+                player.currentPosition.x += 1;
+                last.right = Date.now();
+                player.updateGhostPosition();
+            }
+        } else if (key === binding.down && Date.now() - last.down > INPUT_INTERVAL) {
+            if (isValidMove(player.currentShape.shape, player.currentPosition.x, player.currentPosition.y + 1, player)) {
+                player.currentPosition.y += 1;
+                last.down = Date.now();
+                player.updateGhostPosition();
+            }
+        } else if (key === binding.rotate && Date.now() - last.rotate > INPUT_INTERVAL) {
+            const rotatedShape = rotate(player.currentShape.shape);
+            if (isValidMove(rotatedShape, player.currentPosition.x, player.currentPosition.y, player)) {
+                player.currentShape.shape = rotatedShape;
+                last.rotate = Date.now();
+                player.updateGhostPosition();
+            } else {
+                const leftPos = { x: player.currentPosition.x - 1, y: player.currentPosition.y };
+                const rightPos = { x: player.currentPosition.x + 1, y: player.currentPosition.y };
+                if (isValidMove(rotatedShape, leftPos.x, leftPos.y, player)) {
+                    player.currentShape.shape = rotatedShape;
+                    player.currentPosition = leftPos;
+                    last.rotate = Date.now();
+                    player.updateGhostPosition();
+                } else if (isValidMove(rotatedShape, rightPos.x, rightPos.y, player)) {
+                    player.currentShape.shape = rotatedShape;
+                    player.currentPosition = rightPos;
+                    last.rotate = Date.now();
+                    player.updateGhostPosition();
+                }
+            }
+        } else if (key === binding.flip && Date.now() - last.flip > INPUT_INTERVAL) {
+            const flippedShape = flip(player.currentShape.shape);
+            if (isValidMove(flippedShape, player.currentPosition.x, player.currentPosition.y, player)) {
+                player.currentShape.shape = flippedShape;
+                last.flip = Date.now();
+                player.updateGhostPosition();
+            }
         }
     });
 }
@@ -237,7 +308,7 @@ function Player(name, ctx, color, gamepadIndex) {
 
     // コントローラー入力を処理するメソッド
     this.handleControllerInput = function(gamepad) {
-        const inputInterval = 180; // ボタン入力の最小時間間隔を長く設定
+        const inputInterval = INPUT_INTERVAL; // ボタン入力の最小時間間隔
 
         // ハードドロップ (十字キーの上)
         if (gamepad.buttons[12].pressed && Date.now() - this.lastInputTime.hardDrop > inputInterval) {
