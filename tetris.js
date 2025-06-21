@@ -302,6 +302,7 @@ function Player(name, ctx, color, gamepadIndex) {
     this.gamepadIndex = gamepadIndex;
     this.ghostPosition = { x: 0, y: 0 };
     this.score = 0;
+    this.shielded = false;
 
     // 追加: コントローラー入力の最後の時間を管理するオブジェクト
     this.lastInputTime = {
@@ -507,29 +508,28 @@ function calculateScore(clearedLines) {
 function addObstacleBlocks(player, clearedLines) {
     if (clearedLines === 0) return;
 
-    const playerRanks = players.filter((_, index) => activePlayers[index]).sort((a, b) => b.score - a.score);
-    const currentPlayerRank = playerRanks.findIndex(p => p === player);
+    // 対象となるプレイヤーを抽出（自分以外のアクティブなプレイヤー）
+    const targets = players.filter((p, idx) => p !== player && activePlayers[idx] && !p.shielded);
+    if (targets.length === 0) return;
 
-    if (currentPlayerRank === 0) {
-        // 自分が1位の場合、2位のプレイヤーに邪魔ブロックを送る
-        const numPlayers = playerRanks.length;
-        const blocksPerPlayer = Math.floor(clearedLines / (numPlayers - 1));
-        if (numPlayers > 2) {
-            for (let i = 1; i < numPlayers - 1; i++) {
-                for (let j = 0; j < blocksPerPlayer; j++) {
-                    playerRanks[i].board.splice(0, 1);
-                    playerRanks[i].board.push(Array(boardWidth).fill(0).map((_, index) => index === Math.floor(boardWidth / 2) ? 0 : '#808080'));
-                }
-            }
+    const linesPerTarget = Math.floor(clearedLines / targets.length);
+    let remainder = clearedLines % targets.length;
+
+    targets.forEach(target => {
+        let linesToAdd = linesPerTarget;
+        if (remainder > 0) {
+            linesToAdd += 1;
+            remainder -= 1;
         }
-    } else if (currentPlayerRank === 1) {
-        // 自分が2位の場合、1位のプレイヤーに邪魔ブロックを送る
-        const topPlayer = playerRanks[0];
-        for (let i = 0; i < clearedLines; i++) {
-            topPlayer.board.splice(0, 1);
-            topPlayer.board.push(Array(boardWidth).fill(0).map((_, index) => index === Math.floor(boardWidth / 2) ? 0 : '#808080'));
+        for (let i = 0; i < linesToAdd; i++) {
+            target.board.splice(0, 1);
+            target.board.push(
+                Array(boardWidth)
+                    .fill(0)
+                    .map((_, index) => (index === Math.floor(boardWidth / 2) ? 0 : '#808080'))
+            );
         }
-    }
+    });
 }
 
 // 特殊ブロックの効果を適用する関数
