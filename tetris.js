@@ -4,6 +4,98 @@ const boardWidth = 10;
 const boardHeight = 20;
 const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
 
+// 汎用コントローラー用ボタンマッピングシステム
+class UniversalGamepadMapper {
+    constructor() {
+        // 標準的なゲームパッドボタンマッピング（Standard Gamepad Layout）
+        this.standardMapping = {
+            // Face buttons
+            'A': [0],           // A/Cross
+            'B': [1],           // B/Circle  
+            'X': [2],           // X/Square
+            'Y': [3],           // Y/Triangle
+            
+            // Shoulder buttons
+            'LB': [4],          // Left Bumper
+            'RB': [5],          // Right Bumper
+            'LT': [6],          // Left Trigger
+            'RT': [7],          // Right Trigger
+            
+            // Menu buttons
+            'SELECT': [8],      // Select/Share
+            'START': [9],       // Start/Options
+            'LS': [10],         // Left Stick Click
+            'RS': [11],         // Right Stick Click
+            
+            // D-pad (multiple possible mappings)
+            'DPAD_UP': [12, 16],
+            'DPAD_DOWN': [13, 17], 
+            'DPAD_LEFT': [14, 18],
+            'DPAD_RIGHT': [15, 19],
+            
+            // Additional mappings for various controllers
+            'EXTRA1': [16], 'EXTRA2': [17], 'EXTRA3': [18], 'EXTRA4': [19],
+            'EXTRA5': [20], 'EXTRA6': [21], 'EXTRA7': [22], 'EXTRA8': [23]
+        };
+        
+        // Xbox One specific optimizations
+        this.xboxMapping = {
+            'A': [0], 'B': [1], 'X': [2], 'Y': [3],
+            'LB': [4], 'RB': [5], 'LT': [6], 'RT': [7],
+            'SELECT': [8], 'START': [9], 'LS': [10], 'RS': [11],
+            'DPAD_UP': [12], 'DPAD_DOWN': [13], 'DPAD_LEFT': [14], 'DPAD_RIGHT': [15]
+        };
+    }
+    
+    detectControllerType(gamepad) {
+        const id = gamepad.id.toLowerCase();
+        if (id.includes('xbox') || id.includes('045e')) {
+            return 'xbox';
+        } else if (id.includes('playstation') || id.includes('sony') || id.includes('054c')) {
+            return 'playstation';
+        } else if (id.includes('nintendo') || id.includes('057e')) {
+            return 'nintendo';
+        }
+        return 'generic';
+    }
+    
+    getMapping(gamepad) {
+        const type = this.detectControllerType(gamepad);
+        switch (type) {
+            case 'xbox':
+                return this.xboxMapping;
+            default:
+                return this.standardMapping;
+        }
+    }
+    
+    isButtonPressed(gamepad, action) {
+        const mapping = this.getMapping(gamepad);
+        const buttonIndices = mapping[action] || [];
+        
+        return buttonIndices.some(buttonIndex => {
+            const button = gamepad.buttons[buttonIndex];
+            return button && button.pressed;
+        });
+    }
+    
+    getAxisValue(gamepad, axisIndex, deadzone = 0.1) {
+        if (!gamepad.axes[axisIndex]) return 0;
+        const value = gamepad.axes[axisIndex];
+        return Math.abs(value) > deadzone ? value : 0;
+    }
+    
+    detectPressedButtons(gamepad) {
+        const pressed = [];
+        for (let i = 0; i < gamepad.buttons.length; i++) {
+            if (gamepad.buttons[i] && gamepad.buttons[i].pressed) {
+                pressed.push(i);
+            }
+        }
+        return pressed;
+    }
+}
+
 // グローバルGamepad管理システム
 class GamepadManager {
     constructor() {
@@ -107,6 +199,7 @@ class GamepadManager {
 
 // グローバルインスタンス
 const gamepadManager = new GamepadManager();
+const gamepadMapper = new UniversalGamepadMapper();
 
 const shapes = [
     { shape: [[1, 1, 1, 1]], color: "#00FFFF" }, // Iテトリミノ
@@ -249,62 +342,69 @@ class Tetris {
         
         const inputInterval = INPUT_INTERVAL;
         
-        // デバッグ: ボタンの状態をログ出力（最初の数秒間のみ）
-        if (Math.random() < 0.01) { // 1%の確率でログ出力
-            console.log(`Player ${this.playerId} gamepad buttons:`, 
-                gamepad.buttons.map((btn, i) => btn.pressed ? i : null).filter(x => x !== null));
+        // デバッグ: コントローラータイプとボタン状態をログ出力
+        if (Math.random() < 0.005) { // 0.5%の確率でログ出力
+            const controllerType = gamepadMapper.detectControllerType(gamepad);
+            const pressedButtons = gamepadMapper.detectPressedButtons(gamepad);
+            console.log(`Player ${this.playerId} [${controllerType}] pressed buttons:`, pressedButtons);
         }
         
-        // ボタンの押下状態を管理（連続入力を防ぐ）
-        const checkButton = (buttonIndex, action, inputType) => {
-            const button = gamepad.buttons[buttonIndex];
-            if (!button) return false;
-            
-            const wasPressed = this.gamepadButtonStates[buttonIndex] || false;
-            const isPressed = button.pressed;
-            this.gamepadButtonStates[buttonIndex] = isPressed;
-            
-            // ボタンが新しく押された場合のみ実行
-            if (isPressed && !wasPressed && time - this.lastInputTime[inputType] > inputInterval) {
-                action();
-                this.lastInputTime[inputType] = time;
-                return true;
+        // 汎用ボタンチェック関数
+        const checkAction = (action, gameAction, inputType) => {
+            if (gamepadMapper.isButtonPressed(gamepad, action)) {
+                const actionKey = `${action}_${this.playerId}`;
+                const wasPressed = this.gamepadButtonStates[actionKey] || false;
+                this.gamepadButtonStates[actionKey] = true;
+                
+                // 新しく押された場合のみ実行
+                if (!wasPressed && time - this.lastInputTime[inputType] > inputInterval) {
+                    gameAction();
+                    this.lastInputTime[inputType] = time;
+                    return true;
+                }
+            } else {
+                this.gamepadButtonStates[`${action}_${this.playerId}`] = false;
             }
             return false;
         };
         
-        // 左右のアナログスティック対応
-        const leftStickX = gamepad.axes[0];
-        const leftStickY = gamepad.axes[1];
+        // アナログスティック対応（Xbox Oneコントローラー最適化）
+        const leftStickX = gamepadMapper.getAxisValue(gamepad, 0, 0.3); // デッドゾーン拡大
+        const leftStickY = gamepadMapper.getAxisValue(gamepad, 1, 0.3);
         
-        // アナログスティック左右
-        if (Math.abs(leftStickX) > 0.5 && time - this.lastInputTime.left > inputInterval && time - this.lastInputTime.right > inputInterval) {
-            if (leftStickX < -0.5) {
+        // アナログスティック左右移動
+        if (Math.abs(leftStickX) > 0.3) {
+            const now = time;
+            if (leftStickX < -0.3 && now - this.lastInputTime.left > inputInterval) {
                 this.move(-1);
-                this.lastInputTime.left = time;
-            } else if (leftStickX > 0.5) {
+                this.lastInputTime.left = now;
+            } else if (leftStickX > 0.3 && now - this.lastInputTime.right > inputInterval) {
                 this.move(1);
-                this.lastInputTime.right = time;
+                this.lastInputTime.right = now;
             }
         }
         
-        // アナログスティック下
-        if (leftStickY > 0.5 && time - this.lastInputTime.down > inputInterval) {
+        // アナログスティック下移動
+        if (leftStickY > 0.3 && time - this.lastInputTime.down > inputInterval) {
             this.drop();
             this.lastInputTime.down = time;
         }
         
-        // D-pad対応（複数のボタン番号を試行）
-        checkButton(14, () => this.move(-1), 'left') || // D-pad left
-        checkButton(15, () => this.move(1), 'right') ||  // D-pad right
-        checkButton(13, () => this.drop(), 'down') ||    // D-pad down
-        checkButton(12, () => this.hardDrop(), 'hardDrop'); // D-pad up
+        // D-pad操作（汎用マッピング使用）
+        checkAction('DPAD_LEFT', () => this.move(-1), 'left');
+        checkAction('DPAD_RIGHT', () => this.move(1), 'right');
+        checkAction('DPAD_DOWN', () => this.drop(), 'down');
+        checkAction('DPAD_UP', () => this.hardDrop(), 'hardDrop');
         
-        // 回転ボタン（複数のボタンを試行）
-        checkButton(0, () => this.rotate(), 'rotate') ||  // A button
-        checkButton(1, () => this.rotate(), 'rotate') ||  // B button
-        checkButton(2, () => this.rotate(), 'rotate') ||  // X button
-        checkButton(3, () => this.rotate(), 'rotate');    // Y button
+        // ボタン操作（フェイスボタンで回転）
+        checkAction('A', () => this.rotate(), 'rotate') ||
+        checkAction('B', () => this.rotate(), 'rotate') ||
+        checkAction('X', () => this.rotate(), 'rotate') ||
+        checkAction('Y', () => this.rotate(), 'rotate');
+        
+        // 追加操作（肩ボタンでも回転可能）
+        checkAction('RB', () => this.rotate(), 'rotate') ||
+        checkAction('LB', () => this.hardDrop(), 'hardDrop');
     }
 
     makeCPUMove() {

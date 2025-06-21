@@ -327,20 +327,31 @@
             let statusHTML = '';
             
             if (availableGamepads.length === 0) {
-                statusHTML = 'コントローラーが見つかりません';
+                statusHTML = 'コントローラーが見つかりません<br><small>ボタンを押してアクティベートしてください</small>';
             } else {
                 statusHTML += `接続中: ${availableGamepads.length}台<br>`;
                 availableGamepads.forEach(gp => {
+                    const gamepad = navigator.getGamepads()[gp.index];
+                    const controllerType = gamepad ? gamepadMapper.detectControllerType(gamepad) : 'unknown';
                     const assignedPlayer = Object.keys(assignments).find(playerId => 
                         assignments[playerId].gamepadIndex === gp.index);
-                    statusHTML += `[${gp.index}] ${gp.id.substring(0, 20)}...`;
+                    
+                    statusHTML += `[${gp.index}] ${controllerType.toUpperCase()}<br>`;
+                    statusHTML += `<small>${gp.id.substring(0, 30)}${gp.id.length > 30 ? '...' : ''}</small><br>`;
+                    
                     if (assignedPlayer) {
-                        statusHTML += ` → Player ${assignedPlayer}`;
+                        statusHTML += `<strong>→ Player ${assignedPlayer}</strong>`;
                     } else {
-                        statusHTML += ` (未割り当て)`;
+                        statusHTML += `<span style="color: #888">(未割り当て)</span>`;
                     }
-                    statusHTML += '<br>';
+                    statusHTML += '<br><br>';
                 });
+                
+                statusHTML += '<small>Xbox One操作方法:<br>';
+                statusHTML += '・左スティック/十字キー: 移動<br>';
+                statusHTML += '・A,B,X,Yボタン: 回転<br>';
+                statusHTML += '・十字キー上/LB: ハードドロップ<br>';
+                statusHTML += '・RB: 回転</small>';
             }
             
             gamepadList.innerHTML = statusHTML;
@@ -349,6 +360,45 @@
         // Update status periodically
         setInterval(updateGamepadStatus, 2000);
         updateGamepadStatus();
+        
+        // Real-time button testing (ボタンテスト機能)
+        let buttonTestActive = false;
+        function startButtonTest() {
+            if (buttonTestActive) return;
+            buttonTestActive = true;
+            
+            function testLoop() {
+                if (!buttonTestActive) return;
+                
+                const gamepads = navigator.getGamepads();
+                for (let i = 0; i < gamepads.length; i++) {
+                    if (gamepads[i]) {
+                        const gamepad = gamepads[i];
+                        const pressedButtons = gamepadMapper.detectPressedButtons(gamepad);
+                        const controllerType = gamepadMapper.detectControllerType(gamepad);
+                        
+                        if (pressedButtons.length > 0) {
+                            console.log(`Gamepad ${i} [${controllerType}] - Buttons pressed:`, pressedButtons);
+                            
+                            // Test specific actions
+                            const actions = ['DPAD_LEFT', 'DPAD_RIGHT', 'DPAD_UP', 'DPAD_DOWN', 'A', 'B', 'X', 'Y', 'LB', 'RB'];
+                            const activeActions = actions.filter(action => gamepadMapper.isButtonPressed(gamepad, action));
+                            if (activeActions.length > 0) {
+                                console.log(`Actions detected:`, activeActions);
+                            }
+                        }
+                    }
+                }
+                
+                requestAnimationFrame(testLoop);
+            }
+            
+            console.log('Button test started. Press any button on your controller...');
+            testLoop();
+        }
+        
+        // Start button test when page loads (コントローラーテスト開始)
+        setTimeout(startButtonTest, 2000);
         
         // Gamepad connection events
         window.addEventListener('gamepadconnected', (e) => {
