@@ -1,22 +1,8 @@
 // ゲームの設定と定数
-const canvas1 = document.getElementById("player1Canvas");
-const ctx1 = canvas1.getContext("2d");
-const canvas2 = document.getElementById("player2Canvas");
-const ctx2 = canvas2.getContext("2d");
-const canvas3 = document.getElementById("player3Canvas");
-const ctx3 = canvas3.getContext("2d");
 const blockSize = 32;
 const boardWidth = 10;
 const boardHeight = 20;
 const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
-
-const keyBindings = [
-    { left: 'ArrowLeft', right: 'ArrowRight', down: 'ArrowDown', rotate: 'z', hardDrop: 'ArrowUp', flip: 'x' },
-    { left: 'a', right: 'd', down: 's', rotate: 'w', hardDrop: 'q', flip: 'e' },
-    { left: 'j', right: 'l', down: 'k', rotate: 'i', hardDrop: 'u', flip: 'o' }
-];
-canvas1.width = canvas2.width = canvas3.width = boardWidth * blockSize;
-canvas1.height = canvas2.height = canvas3.height = boardHeight * blockSize;
 
 const shapes = [
     { shape: [[1, 1, 1, 1]], color: "#00FFFF" }, // Iテトリミノ
@@ -41,661 +27,306 @@ function deepCopyShape(shape) {
     };
 }
 
-
-let players = [];
-let activePlayers = [true, true, true]; // 1P, 2P, 3P のオンオフ状態を管理
-let gameActive = false;  // ゲームのアクティブ状態を管理
-
-document.getElementById('startButton').addEventListener('click', () => {
-    gameActive = true;
-    initializePlayers();
-    assignGamepadsToPlayers();
-    requestFullScreen();
-    resetGame();
-    gameLoop();
-});
-
-document.getElementById('togglePlayer1').addEventListener('click', () => {
-    activePlayers[0] = !activePlayers[0];
-    toggleCanvasVisibility(canvas1, activePlayers[0]);
-});
-
-document.getElementById('togglePlayer2').addEventListener('click', () => {
-    activePlayers[1] = !activePlayers[1];
-    toggleCanvasVisibility(canvas2, activePlayers[1]);
-});
-
-document.getElementById('togglePlayer3').addEventListener('click', () => {
-    activePlayers[2] = !activePlayers[2];
-    toggleCanvasVisibility(canvas3, activePlayers[2]);
-});
-
-// キーボード入力イベントを登録
-document.addEventListener('keydown', handleKeyboardInput);
-window.addEventListener('gamepadconnected', assignGamepadsToPlayers);
-window.addEventListener('gamepaddisconnected', assignGamepadsToPlayers);
-
-function toggleCanvasVisibility(canvas, isVisible) {
-    canvas.style.display = isVisible ? 'block' : 'none';
-}
-
-function requestFullScreen() {
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-    } else if (elem.mozRequestFullScreen) { // Firefox
-        elem.mozRequestFullScreen();
-    } else if (elem.webkitRequestFullscreen) { // Chrome, Safari and Opera
-        elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) { // IE/Edge
-        elem.msRequestFullscreen();
-    }
-}
-
-function initializePlayers() {
-    players = [
-        new Player('Player 1', ctx1, '#00FFFF', null),
-        new Player('Player 2', ctx2, '#FF00FF', null),
-        new Player('Player 3', ctx3, '#00FF00', null)
-    ];
-    assignGamepadsToPlayers();
-}
-
-function assignGamepadsToPlayers() {
-    const connected = [];
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    for (let i = 0; i < pads.length; i++) {
-        if (pads[i]) connected.push(i);
-    }
-    players.forEach((player, index) => {
-        player.gamepadIndex = connected[index] !== undefined ? connected[index] : null;
-    });
-}
-
-function resetGame() {
-    players.forEach(player => {
-        player.reset();
-    });
-}
-
-function gameLoop() {
-    if (!gameActive) {
-        return;  // ゲームが非アクティブの場合はループを終了
-    }
-    handleControllerInput();
-    players.forEach((player, index) => {
-        if (activePlayers[index] && Date.now() - player.lastDropTime > player.dropInterval) {
-            player.lastDropTime = Date.now();
-            if (!moveDown(player)) {
-                const clearedLines = placeShape(player);
-                addObstacleBlocks(player, clearedLines);
-                if (resetPlayer(player)) {
-                    if (checkGameOver()) {
-                        endGame();
-                        return;
-                    }
-                }
-            }
-        }
-        if (activePlayers[index]) {
-            draw(player);
-        }
-    });
-    requestAnimationFrame(gameLoop);
-}
-
-function endGame() {
-    gameActive = false;  // ゲームを非アクティブに設定
-    const activePlayersList = players.filter((player, index) => activePlayers[index]);
-    if (activePlayersList.length === 1) {
-        alert(activePlayersList[0].name + " wins!");
-    }
-}
-
-function resetPlayer(player) {
-    player.setNextShape();  // 次のブロックに切り替える
-    if (player.gameOver) {
-        activePlayers[players.indexOf(player)] = false;
-        toggleCanvasVisibility(player.ctx.canvas, false);
-        return true;  // ゲームオーバーを示す
-    }
-    return false;
-}
-
-function checkGameOver() {
-    return activePlayers.filter(isActive => isActive).length === 1;
-}
-
-// コントローラー入力を処理
-function handleControllerInput() {
-    const gamepads = navigator.getGamepads();
-    players.forEach(player => {
-        if (player.gamepadIndex !== null) {
-            const gamepad = gamepads[player.gamepadIndex];
-            if (gamepad) {
-                player.handleControllerInput(gamepad);
-            }
-        }
-    });
-}
-
-// キーボード入力を処理
-function handleKeyboardInput(event) {
-    if (!gameActive) return;
-    players.forEach((player, index) => {
-        if (!activePlayers[index]) return;
-        const binding = keyBindings[index];
-        const last = player.lastInputTime;
-        const key = event.key;
-
-        if (key === binding.hardDrop && Date.now() - last.hardDrop > INPUT_INTERVAL) {
-            player.hardDrop();
-            last.hardDrop = Date.now();
-        } else if (key === binding.left && Date.now() - last.left > INPUT_INTERVAL) {
-            if (isValidMove(player.currentShape.shape, player.currentPosition.x - 1, player.currentPosition.y, player)) {
-                player.currentPosition.x -= 1;
-                last.left = Date.now();
-                player.updateGhostPosition();
-            }
-        } else if (key === binding.right && Date.now() - last.right > INPUT_INTERVAL) {
-            if (isValidMove(player.currentShape.shape, player.currentPosition.x + 1, player.currentPosition.y, player)) {
-                player.currentPosition.x += 1;
-                last.right = Date.now();
-                player.updateGhostPosition();
-            }
-        } else if (key === binding.down && Date.now() - last.down > INPUT_INTERVAL) {
-            if (isValidMove(player.currentShape.shape, player.currentPosition.x, player.currentPosition.y + 1, player)) {
-                player.currentPosition.y += 1;
-                last.down = Date.now();
-                player.updateGhostPosition();
-            }
-        } else if (key === binding.rotate && Date.now() - last.rotate > INPUT_INTERVAL) {
-            const rotatedShape = rotate(player.currentShape.shape);
-            if (isValidMove(rotatedShape, player.currentPosition.x, player.currentPosition.y, player)) {
-                player.currentShape.shape = rotatedShape;
-                last.rotate = Date.now();
-                player.updateGhostPosition();
-            } else {
-                const leftPos = { x: player.currentPosition.x - 1, y: player.currentPosition.y };
-                const rightPos = { x: player.currentPosition.x + 1, y: player.currentPosition.y };
-                if (isValidMove(rotatedShape, leftPos.x, leftPos.y, player)) {
-                    player.currentShape.shape = rotatedShape;
-                    player.currentPosition = leftPos;
-                    last.rotate = Date.now();
-                    player.updateGhostPosition();
-                } else if (isValidMove(rotatedShape, rightPos.x, rightPos.y, player)) {
-                    player.currentShape.shape = rotatedShape;
-                    player.currentPosition = rightPos;
-                    last.rotate = Date.now();
-                    player.updateGhostPosition();
-                }
-            }
-        } else if (key === binding.flip && Date.now() - last.flip > INPUT_INTERVAL) {
-            const flippedShape = flip(player.currentShape.shape);
-            if (isValidMove(flippedShape, player.currentPosition.x, player.currentPosition.y, player)) {
-                player.currentShape.shape = flippedShape;
-                last.flip = Date.now();
-                player.updateGhostPosition();
-            }
-        }
-    });
-}
-
-function drawBlock(ctx, x, y, color) {
-    ctx.fillStyle = color;
-    ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
-}
-
-function draw(player) {
-    const ctx = player.ctx;
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    player.board.forEach((row, y) => {
-        row.forEach((color, x) => {
-            if (color) {
-                drawBlock(ctx, x, y, color);
-            }
-        });
-    });
-    drawShape(ctx, player.currentShape.shape, player.currentPosition.x, player.currentPosition.y, player.currentShape.color);
-    drawGhostShape(ctx, player.currentShape.shape, player.ghostPosition.x, player.ghostPosition.y, player.currentShape.color);
-    drawScore(player);  // スコアを描画
-}
-
-function drawScore(player) {
-    const ctx = player.ctx;
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${player.name} Score: ${player.score}`, 10, 10);
-}
-
-function drawShape(ctx, shape, x, y, color) {
-    shape.forEach((row, dy) => {
-        row.forEach((cell, dx) => {
-            if (cell) {
-                drawBlock(ctx, x + dx, y + dy, color);
-            }
-        });
-    });
-}
-
-function drawGhostShape(ctx, shape, x, y, color) {
-    ctx.globalAlpha = 0.5;
-    drawShape(ctx, shape, x, y, color);
-    ctx.globalAlpha = 1;
-}
-
-function Player(name, ctx, color, gamepadIndex) {
-    this.name = name;
-    this.ctx = ctx;
-    this.board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
-    this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-    this.currentShape = getRandomShape();  // 修正: 初期値をランダムなブロックに設定
-    this.nextShape = getRandomShape();
-    this.dropInterval = 700;
-    this.lastDropTime = Date.now();
-    this.gameOver = false;
-    this.color = color;
-    this.gamepadIndex = gamepadIndex;
-    this.ghostPosition = { x: 0, y: 0 };
-    this.score = 0;
-
-    // 追加: コントローラー入力の最後の時間を管理するオブジェクト
-    this.lastInputTime = {
-        left: 0,
-        right: 0,
-        down: 0,
-        rotate: 0,
-        hardDrop: 0,
-        flip: 0
-    };
-
-    // コントローラー入力を処理するメソッド
-    this.handleControllerInput = function(gamepad) {
-        const inputInterval = INPUT_INTERVAL; // ボタン入力の最小時間間隔
-
-        // ハードドロップ (十字キーの上)
-        if (gamepad.buttons[12].pressed && Date.now() - this.lastInputTime.hardDrop > inputInterval) {
-            this.hardDrop();
-            this.lastInputTime.hardDrop = Date.now();
-        }
-
-        // 左移動
-        if (gamepad.buttons[14].pressed && Date.now() - this.lastInputTime.left > inputInterval) {
-            if (isValidMove(this.currentShape.shape, this.currentPosition.x - 1, this.currentPosition.y, this)) {
-                this.currentPosition.x -= 1;
-                this.lastInputTime.left = Date.now();
-                this.updateGhostPosition();
-            }
-        }
-
-        // 右移動
-        if (gamepad.buttons[15].pressed && Date.now() - this.lastInputTime.right > inputInterval) {
-            if (isValidMove(this.currentShape.shape, this.currentPosition.x + 1, this.currentPosition.y, this)) {
-                this.currentPosition.x += 1;
-                this.lastInputTime.right = Date.now();
-                this.updateGhostPosition();
-            }
-        }
-
-        // 下移動
-        if (gamepad.buttons[13].pressed && Date.now() - this.lastInputTime.down > inputInterval) {
-            if (isValidMove(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y + 1, this)) {
-                this.currentPosition.y += 1;
-                this.lastInputTime.down = Date.now();
-                this.updateGhostPosition();
-            }
-        }
-
-        // 回転
-        if (gamepad.buttons[0].pressed && Date.now() - this.lastInputTime.rotate > inputInterval) {
-            const rotatedShape = rotate(this.currentShape.shape);
-            if (isValidMove(rotatedShape, this.currentPosition.x, this.currentPosition.y, this)) {
-                this.currentShape.shape = rotatedShape;
-                this.lastInputTime.rotate = Date.now();
-                this.updateGhostPosition();
-            } else {
-                // 回転できない場合は、左右に1ブロック移動して回転を試みる
-                const leftPosition = { x: this.currentPosition.x - 1, y: this.currentPosition.y };
-                const rightPosition = { x: this.currentPosition.x + 1, y: this.currentPosition.y };
-                if (isValidMove(rotatedShape, leftPosition.x, leftPosition.y, this)) {
-                    this.currentShape.shape = rotatedShape;
-                    this.currentPosition = leftPosition;
-                    this.lastInputTime.rotate = Date.now();
-                    this.updateGhostPosition();
-                } else if (isValidMove(rotatedShape, rightPosition.x, rightPosition.y, this)) {
-                    this.currentShape.shape = rotatedShape;
-                    this.currentPosition = rightPosition;
-                    this.lastInputTime.rotate = Date.now();
-                    this.updateGhostPosition();
-                }
-            }
-        }
-
-        // 反転 (フリップ)
-        if (gamepad.buttons[1].pressed && Date.now() - this.lastInputTime.flip > inputInterval) {
-            const flippedShape = flip(this.currentShape.shape);
-            if (isValidMove(flippedShape, this.currentPosition.x, this.currentPosition.y, this)) {
-                this.currentShape.shape = flippedShape;
-                this.lastInputTime.flip = Date.now();
-                this.updateGhostPosition();
-            }
-        }
-    };
-
-    // ゴーストピースの位置を更新するメソッド
-    this.updateGhostPosition = function() {
-        let ghostY = this.currentPosition.y;
-        while (isValidMove(this.currentShape.shape, this.currentPosition.x, ghostY + 1, this)) {
-            ghostY++;
-        }
-        this.ghostPosition = { x: this.currentPosition.x, y: ghostY };
-    };
-
-    // ハードドロップを実行するメソッド
-    this.hardDrop = function() {
-        while (moveDown(this)) {
-            // ピースを可能な限り下へ移動
-        }
-        placeShape(this);  // 最終位置にピースを固定
-        const clearedLines = clearLines(this);  // ラインを消去
-        addObstacleBlocks(this, clearedLines);  // 相手プレイヤーに邪魔ブロックを追加
-        this.setNextShape();  // 修正: 次のブロックに切り替える
-    };
-
-    // 追加: 次のブロックに切り替えるメソッド    
-    this.setNextShape = function() {
-        this.currentShape = deepCopyShape(this.nextShape);
-        this.nextShape = getRandomShape();
-        this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-        if (!isValidMove(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y, this)) {
-            this.gameOver = true;
-        }
-        this.updateGhostPosition();
-    };
-
-    this.reset = function() {
+// Tetrisクラスの定義
+class Tetris {
+    constructor(playerId, mode) {
+        this.playerId = playerId;
+        this.mode = mode; // 'ON' (human), 'CPU', or 'OFF'
+        this.canvas = document.getElementById(`player${playerId}Canvas`);
+        this.ctx = this.canvas.getContext('2d');
+        this.nextCanvas = document.getElementById(`player${playerId}Next`);
+        this.nextCtx = this.nextCanvas.getContext('2d');
+        this.scoreElement = document.getElementById(`player${playerId}Score`);
+        
+        this.canvas.width = boardWidth * blockSize;
+        this.canvas.height = boardHeight * blockSize;
+        this.nextCanvas.width = 4 * blockSize;
+        this.nextCanvas.height = 4 * blockSize;
+        
         this.board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
+        this.currentShape = null;
+        this.nextShape = null;
         this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-        this.currentShape = getRandomShape();
-        this.nextShape = getRandomShape();
+        this.ghostPosition = { x: 0, y: 0 };
         this.dropInterval = 700;
         this.lastDropTime = Date.now();
         this.gameOver = false;
         this.score = 0;
+        
+        this.lastInputTime = {
+            left: 0,
+            right: 0,
+            down: 0,
+            rotate: 0,
+            hardDrop: 0
+        };
+        
+        // CPUのAI設定
+        this.cpuMoveInterval = 500;
+        this.lastCPUMoveTime = Date.now();
+    }
+
+    start() {
+        this.currentShape = getRandomShape();
+        this.nextShape = getRandomShape();
+        this.updateGhostPosition();
+        this.draw();
+        this.drawNext();
+    }
+
+    update(time) {
+        if (this.gameOver) return 0;
+        
+        if (this.mode === 'CPU') {
+            if (time - this.lastCPUMoveTime > this.cpuMoveInterval) {
+                this.makeCPUMove();
+                this.lastCPUMoveTime = time;
+            }
+        }
+        
+        if (time - this.lastDropTime > this.dropInterval) {
+            this.lastDropTime = time;
+            if (!this.moveDown()) {
+                const clearedLines = this.placeShape();
+                this.setNextShape();
+                if (this.checkGameOver()) {
+                    this.gameOver = true;
+                }
+                this.draw();
+                this.drawNext();
+                return clearedLines;
+            }
+        }
+        
+        this.draw();
+        return 0;
+    }
+
+    makeCPUMove() {
+        // シンプルなCPUロジック
+        if (Math.random() < 0.3) {
+            if (this.canMove(-1, 0)) {
+                this.move(-1);
+            } else if (this.canMove(1, 0)) {
+                this.move(1);
+            }
+        }
+        
+        if (Math.random() < 0.1) {
+            this.rotate();
+        }
+        
+        if (Math.random() < 0.5) {
+            this.drop();
+        }
+    }
+
+    move(dx) {
+        if (this.canMove(dx, 0)) {
+            this.currentPosition.x += dx;
+            this.updateGhostPosition();
+        }
+    }
+
+    drop() {
+        if (this.canMove(0, 1)) {
+            this.currentPosition.y += 1;
+            this.updateGhostPosition();
+        }
+    }
+
+    rotate() {
+        const rotatedShape = this.rotateMatrix(this.currentShape.shape);
+        if (this.isValidMove(rotatedShape, this.currentPosition.x, this.currentPosition.y)) {
+            this.currentShape.shape = rotatedShape;
+            this.updateGhostPosition();
+        } else {
+            // Wall kick
+            const offsets = [-1, 1, -2, 2];
+            for (let offset of offsets) {
+                if (this.isValidMove(rotatedShape, this.currentPosition.x + offset, this.currentPosition.y)) {
+                    this.currentShape.shape = rotatedShape;
+                    this.currentPosition.x += offset;
+                    this.updateGhostPosition();
+                    break;
+                }
+            }
+        }
+    }
+
+    hardDrop() {
+        let clearedLines = 0;
+        while (this.canMove(0, 1)) {
+            this.currentPosition.y += 1;
+        }
+        clearedLines = this.placeShape();
+        this.setNextShape();
+        if (this.checkGameOver()) {
+            this.gameOver = true;
+        }
+        this.draw();
+        this.drawNext();
+        return clearedLines;
+    }
+
+    canMove(dx, dy) {
+        return this.isValidMove(this.currentShape.shape, this.currentPosition.x + dx, this.currentPosition.y + dy);
+    }
+
+    moveDown() {
+        if (this.canMove(0, 1)) {
+            this.currentPosition.y += 1;
+            return true;
+        }
+        return false;
+    }
+
+    isValidMove(shape, x, y) {
+        return shape.every((row, dy) => {
+            return row.every((cell, dx) => {
+                let newX = x + dx;
+                let newY = y + dy;
+                return !cell || (newX >= 0 && newX < boardWidth && newY < boardHeight && !this.board[newY][newX]);
+            });
+        });
+    }
+
+    placeShape() {
+        this.currentShape.shape.forEach((row, dy) => {
+            row.forEach((cell, dx) => {
+                if (cell) {
+                    this.board[this.currentPosition.y + dy][this.currentPosition.x + dx] = this.currentShape.color;
+                }
+            });
+        });
+        
+        let clearedLines = 0;
+        for (let y = this.board.length - 1; y >= 0; y--) {
+            if (this.board[y].every(cell => cell)) {
+                this.board.splice(y, 1);
+                this.board.unshift(Array(boardWidth).fill(0));
+                clearedLines++;
+                y++;
+            }
+        }
+        
+        this.score += this.calculateScore(clearedLines);
+        this.updateScore();
+        return clearedLines;
+    }
+
+    calculateScore(clearedLines) {
+        const scores = [0, 100, 300, 500, 800];
+        return scores[clearedLines] || 0;
+    }
+
+    setNextShape() {
+        this.currentShape = deepCopyShape(this.nextShape);
+        this.nextShape = getRandomShape();
+        this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
         this.updateGhostPosition();
     }
-}
 
-function rotate(matrix) {
-    const result = [];
-    for (let col = 0; col < matrix[0].length; col++) {
-        const newRow = [];
-        for (let row = matrix.length - 1; row >= 0; row--) {
-            newRow.push(matrix[row][col]);
+    checkGameOver() {
+        return !this.isValidMove(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y);
+    }
+
+    updateGhostPosition() {
+        let ghostY = this.currentPosition.y;
+        while (this.isValidMove(this.currentShape.shape, this.currentPosition.x, ghostY + 1)) {
+            ghostY++;
         }
-        result.push(newRow);
+        this.ghostPosition = { x: this.currentPosition.x, y: ghostY };
     }
-    return result;
-}
 
-function flip(matrix) {
-    return matrix.map(row => row.reverse());
-}
-
-function isValidMove(shape, x, y, player) {
-    return shape.every((row, dy) => {
-        return row.every((cell, dx) => {
-            let newX = x + dx;
-            let newY = y + dy;
-            return !cell || (newX >= 0 && newX < boardWidth && newY < boardHeight && !player.board[newY][newX]);
-        });
-    });
-}
-
-function moveDown(player) {
-    if (isValidMove(player.currentShape.shape, player.currentPosition.x, player.currentPosition.y + 1, player)) {
-        player.currentPosition.y++;
-        return true;
+    rotateMatrix(matrix) {
+        const result = [];
+        for (let col = 0; col < matrix[0].length; col++) {
+            const newRow = [];
+            for (let row = matrix.length - 1; row >= 0; row--) {
+                newRow.push(matrix[row][col]);
+            }
+            result.push(newRow);
+        }
+        return result;
     }
-    return false;
-}
 
-function placeShape(player) {
-    const specialBlocks = [];
-    player.currentShape.shape.forEach((row, dy) => {
-        row.forEach((cell, dx) => {
-            if (cell) {
-                player.board[player.currentPosition.y + dy][player.currentPosition.x + dx] = player.currentShape.color;
-                if (player.currentShape.type) {
-                    specialBlocks.push({ x: player.currentPosition.x + dx, y: player.currentPosition.y + dy, type: player.currentShape.type });
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw board
+        this.board.forEach((row, y) => {
+            row.forEach((color, x) => {
+                if (color) {
+                    this.drawBlock(x, y, color);
                 }
-            }
+            });
         });
-    });
-    applySpecialBlockEffects(player, specialBlocks); // 常にエフェクトを表示するように変更
-    return clearLines(player, specialBlocks);
-}
-
-function clearLines(player, specialBlocks = []) {
-    let clearedLines = 0;
-    for (let y = player.board.length - 1; y >= 0; y--) {
-        if (player.board[y].every(cell => cell)) {
-            player.board.splice(y, 1);
-            player.board.unshift(Array(boardWidth).fill(0));
-            clearedLines++;
-            y++; // since the line is removed, we need to check the same line again
+        
+        // Draw ghost shape
+        if (this.currentShape) {
+            this.drawGhostShape();
+            this.drawShape(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y, this.currentShape.color);
         }
     }
-    // スコアを更新
-    player.score += calculateScore(clearedLines);
-    return clearedLines;
-}
 
-function calculateScore(clearedLines) {
-    const scores = [0, 100, 300, 500, 800];
-    return scores[clearedLines] || 0;
-}
-
-function addObstacleBlocks(player, clearedLines) {
-    if (clearedLines === 0) return;
-
-    const playerRanks = players.filter((_, index) => activePlayers[index]).sort((a, b) => b.score - a.score);
-    const currentPlayerRank = playerRanks.findIndex(p => p === player);
-
-    if (currentPlayerRank === 0) {
-        // 自分が1位の場合、2位のプレイヤーに邪魔ブロックを送る
-        const numPlayers = playerRanks.length;
-        const blocksPerPlayer = Math.floor(clearedLines / (numPlayers - 1));
-        if (numPlayers > 2) {
-            for (let i = 1; i < numPlayers - 1; i++) {
-                for (let j = 0; j < blocksPerPlayer; j++) {
-                    playerRanks[i].board.splice(0, 1);
-                    playerRanks[i].board.push(Array(boardWidth).fill(0).map((_, index) => index === Math.floor(boardWidth / 2) ? 0 : '#808080'));
+    drawNext() {
+        if (!this.nextShape) return;
+        
+        this.nextCtx.clearRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
+        
+        const startX = Math.floor((4 - this.nextShape.shape[0].length) / 2);
+        const startY = Math.floor((4 - this.nextShape.shape.length) / 2);
+        
+        this.nextShape.shape.forEach((row, dy) => {
+            row.forEach((cell, dx) => {
+                if (cell) {
+                    this.nextCtx.fillStyle = this.nextShape.color;
+                    this.nextCtx.fillRect((startX + dx) * blockSize, (startY + dy) * blockSize, blockSize, blockSize);
+                    this.nextCtx.strokeStyle = '#000';
+                    this.nextCtx.strokeRect((startX + dx) * blockSize, (startY + dy) * blockSize, blockSize, blockSize);
                 }
-            }
-        }
-    } else if (currentPlayerRank === 1) {
-        // 自分が2位の場合、1位のプレイヤーに邪魔ブロックを送る
-        const topPlayer = playerRanks[0];
-        for (let i = 0; i < clearedLines; i++) {
-            topPlayer.board.splice(0, 1);
-            topPlayer.board.push(Array(boardWidth).fill(0).map((_, index) => index === Math.floor(boardWidth / 2) ? 0 : '#808080'));
-        }
+            });
+        });
     }
-}
 
-// 特殊ブロックの効果を適用する関数
-function applySpecialBlockEffects(player, specialBlocks) {
-    specialBlocks.forEach(block => {
-        switch (block.type) {
-            case 'bomb':
-                applyBombEffect(player, block.x, block.y);
-                break;
-            case 'scoreBooster':
-                player.score += 500; // 追加スコア
-                showEffect(player.ctx, block.x, block.y, 'Score Boost!');
-                break;
-            case 'slowMotion':
-                applySlowMotionEffect();
-                showEffect(player.ctx, block.x, block.y, 'Slow Motion!');
-                break;
-            case 'shield':
-                applyShieldEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Shield!');
-                break;
-            case 'invisible':
-                applyInvisibleEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Invisible!');
-                break;
-            case 'random':
-                applyRandomEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Random!');
-                break;
-            case 'health':
-                applyHealthEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Health!');
-                break;
-            case 'blind':
-                applyBlindEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Blind!');
-                break;
-        }
-    });
-}
+    drawBlock(x, y, color) {
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+        this.ctx.strokeStyle = '#000';
+        this.ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+    }
 
-function applyBombEffect(player, x, y) {
-    const radius = 1; // 爆弾の効果範囲
-    for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-            const newX = x + dx;
-            const newY = y + dy;
-            if (newX >= 0 && newX < boardWidth && newY >= 0 && newY < boardHeight) {
-                player.board[newY][newX] = 0; // ブロックを破壊
-            }
+    drawShape(shape, x, y, color) {
+        shape.forEach((row, dy) => {
+            row.forEach((cell, dx) => {
+                if (cell) {
+                    this.drawBlock(x + dx, y + dy, color);
+                }
+            });
+        });
+    }
+
+    drawGhostShape() {
+        this.ctx.globalAlpha = 0.3;
+        this.drawShape(this.currentShape.shape, this.ghostPosition.x, this.ghostPosition.y, this.currentShape.color);
+        this.ctx.globalAlpha = 1;
+    }
+
+    updateScore() {
+        if (this.scoreElement) {
+            this.scoreElement.textContent = this.score;
         }
     }
-    showEffect(player.ctx, x, y, 'Boom!');
-}
 
-function applySlowMotionEffect() {
-    players.forEach(player => {
-        player.dropInterval *= 2; // ゲームスピードを遅くする
-        setTimeout(() => {
-            player.dropInterval /= 2; // 効果を元に戻す
-        }, 5000); // 5秒間持続
-    });
-}
-
-function applyShieldEffect(player) {
-    // 他のプレイヤーからの攻撃を防ぐシールドを付与
-    player.shielded = true;
-    setTimeout(() => {
-        player.shielded = false; // 効果を元に戻す
-    }, 5000); // 5秒間持続
-}
-
-function applyInvisibleEffect(player) {
-    player.ctx.canvas.style.opacity = 0.5; // 透明化
-    setTimeout(() => {
-        player.ctx.canvas.style.opacity = 1; // 効果を元に戻す
-    }, 5000); // 5秒間持続
-}
-
-function applyRandomEffect(player) {
-    const randomShape = getRandomShape();
-    player.currentShape = randomShape;
-    player.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-}
-
-function applyHealthEffect(player) {
-    const targetPlayer = players.find(p => p !== player && activePlayers[players.indexOf(p)]);
-    if (targetPlayer) {
-        targetPlayer.score -= 500; // 他のプレイヤーのスコアを減少
-        if (targetPlayer.score < 0) targetPlayer.score = 0;
-    }
-}
-
-function applyBlindEffect(player) {
-    const targetPlayer = players.find(p => p !== player && activePlayers[players.indexOf(p)]);
-    if (targetPlayer) {
-        targetPlayer.ctx.canvas.style.filter = 'blur(5px)'; // 画面をぼかす
-        setTimeout(() => {
-            targetPlayer.ctx.canvas.style.filter = 'none'; // 効果を元に戻す
-        }, 5000); // 5秒間持続
-    }
-}
-
-function showEffect(ctx, x, y, text) {
-    ctx.save();
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'yellow';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, x * blockSize + blockSize / 2, y * blockSize + blockSize / 2);
-    ctx.restore();
-}
-
-  // --- CPUロジック ---
-  runAI() {
-    let bestMove = { score: -Infinity, x: 0, rotation: 0 };
-    for (let r = 0; r < 4; r++) {
-      let tempPiece = { ...this.piece, shape: this.getRotatedShape(this.piece.shape, r) };
-      for (let x = -2; x < COLS; x++) {
-        let tempBoard = JSON.parse(JSON.stringify(this.board));
-        let y = 0;
-        if (this.checkCollisionOnBoard(tempBoard, tempPiece.shape, x, y)) continue;
-        while (!this.checkCollisionOnBoard(tempBoard, tempPiece.shape, x, y + 1)) y++;
-        tempPiece.shape.forEach((row, dy) => row.forEach((val, dx) => {
-            if(val !== 0 && tempBoard[y+dy]) tempBoard[y+dy][x+dx] = 1;
-        }));
-        const score = this.evaluateBoard(tempBoard);
-        if (score > bestMove.score) bestMove = { score, x, rotation: r };
-      }
-    }
-    this.piece.shape = this.getRotatedShape(this.piece.shape, bestMove.rotation);
-    this.piece.x = bestMove.x;
-    return this.hardDrop();
-  }
-
-  evaluateBoard(board) {
-    let height = 0, holes = 0, completedLines = 0;
-    for (let y = 0; y < ROWS; y++) {
-      let isLineComplete = true;
-      for (let x = 0; x < COLS; x++) {
-        if (board[y][x] === 0) {
-          isLineComplete = false;
-          if (y > 0 && board[y-1] && board[y-1][x] !== 0) holes++;
+    addObstacle(lines) {
+        if (lines <= 0) return;
+        
+        for (let i = 0; i < lines; i++) {
+            this.board.splice(0, 1);
+            const obstacleRow = Array(boardWidth).fill('#808080');
+            obstacleRow[Math.floor(Math.random() * boardWidth)] = 0; // ランダムな位置に穴を開ける
+            this.board.push(obstacleRow);
         }
-      }
-      if (isLineComplete) completedLines++;
     }
-    for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) {
-        if (board[y][x] !== 0) { height = ROWS - y; break; }
-      }
-      if (height > 0) break;
-    }
-    return (completedLines * 10) - (height * 0.5) - (holes * 1);
-  }
-  
-  getRotatedShape(shape, rotations) {
-    let tempShape = shape;
-    for (let i = 0; i < rotations; i++) tempShape = tempShape[0].map((_, col) => tempShape.map(row => row[col]).reverse());
-    return tempShape;
-  }
-  
-  checkCollisionOnBoard(board, shape, x, y) {
-      for (let r = 0; r < shape.length; r++) for (let c = 0; c < shape[r].length; c++) {
-        if(shape[r][c] !== 0) {
-            let nX = x + c, nY = y + r;
-            if(nX < 0 || nX >= COLS || nY >= ROWS || (board[nY] && board[nY][nX] !== 0)) return true;
-        }
-      }
-      return false;
-  }
-
-gameLoop();
+}
