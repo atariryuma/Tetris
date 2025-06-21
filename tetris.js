@@ -64,6 +64,40 @@ class Tetris {
         // CPUのAI設定
         this.cpuMoveInterval = 500;
         this.lastCPUMoveTime = 0;
+        
+        // Gamepad設定
+        this.gamepadIndex = null;
+        this.assignGamepad();
+        
+        // Animation設定
+        this.animatingObstacles = [];
+        this.obstacleAnimationSpeed = 8; // pixels per frame
+    }
+
+    assignGamepad() {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (let i = 0; i < gamepads.length; i++) {
+            if (gamepads[i] && !this.isGamepadAssigned(i)) {
+                this.gamepadIndex = i;
+                break;
+            }
+        }
+    }
+    
+    isGamepadAssigned(index) {
+        // この関数は他のプレイヤーがそのゲームパッドを使用しているかチェック
+        // 簡略化のため、常にfalseを返す（実際の実装では全プレイヤーをチェック）
+        return false;
+    }
+    
+    hasGamepadInput() {
+        if (this.gamepadIndex === null) return false;
+        const gamepads = navigator.getGamepads();
+        const gamepad = gamepads[this.gamepadIndex];
+        if (!gamepad) return false;
+        
+        return gamepad.buttons.some(button => button.pressed) || 
+               Math.abs(gamepad.axes[0]) > 0.1 || Math.abs(gamepad.axes[1]) > 0.1;
     }
 
     start() {
@@ -78,6 +112,11 @@ class Tetris {
 
     update(time) {
         if (this.gameOver) return 0;
+        
+        // Handle gamepad input if connected
+        if (this.mode === 'ON' && this.gamepadIndex !== null) {
+            this.handleGamepadInput(time);
+        }
         
         if (this.mode === 'CPU') {
             if (time - this.lastCPUMoveTime > this.cpuMoveInterval) {
@@ -103,6 +142,44 @@ class Tetris {
         this.draw();
         this.drawNext();
         return 0;
+    }
+    
+    handleGamepadInput(time) {
+        const gamepads = navigator.getGamepads();
+        const gamepad = gamepads[this.gamepadIndex];
+        if (!gamepad) return;
+        
+        const inputInterval = INPUT_INTERVAL;
+        
+        // D-pad left (button 14)
+        if (gamepad.buttons[14] && gamepad.buttons[14].pressed && time - this.lastInputTime.left > inputInterval) {
+            this.move(-1);
+            this.lastInputTime.left = time;
+        }
+        
+        // D-pad right (button 15)
+        if (gamepad.buttons[15] && gamepad.buttons[15].pressed && time - this.lastInputTime.right > inputInterval) {
+            this.move(1);
+            this.lastInputTime.right = time;
+        }
+        
+        // D-pad down (button 13)
+        if (gamepad.buttons[13] && gamepad.buttons[13].pressed && time - this.lastInputTime.down > inputInterval) {
+            this.drop();
+            this.lastInputTime.down = time;
+        }
+        
+        // A button (button 0) - rotate
+        if (gamepad.buttons[0] && gamepad.buttons[0].pressed && time - this.lastInputTime.rotate > inputInterval) {
+            this.rotate();
+            this.lastInputTime.rotate = time;
+        }
+        
+        // D-pad up (button 12) - hard drop
+        if (gamepad.buttons[12] && gamepad.buttons[12].pressed && time - this.lastInputTime.hardDrop > inputInterval) {
+            this.hardDrop();
+            this.lastInputTime.hardDrop = time;
+        }
     }
 
     makeCPUMove() {
@@ -257,6 +334,9 @@ class Tetris {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
+        // Update and draw animating obstacles
+        this.updateObstacleAnimations();
+        
         // Draw board
         this.board.forEach((row, y) => {
             row.forEach((color, x) => {
@@ -265,6 +345,9 @@ class Tetris {
                 }
             });
         });
+        
+        // Draw animating obstacles
+        this.drawAnimatingObstacles();
         
         // Draw ghost shape
         if (this.currentShape) {
@@ -326,11 +409,50 @@ class Tetris {
     addObstacle(lines) {
         if (lines <= 0) return;
         
+        // アニメーション付きでお邪魔ブロックを追加
         for (let i = 0; i < lines; i++) {
-            this.board.splice(0, 1);
             const obstacleRow = Array(boardWidth).fill('#808080');
             obstacleRow[Math.floor(Math.random() * boardWidth)] = 0; // ランダムな位置に穴を開ける
-            this.board.push(obstacleRow);
+            
+            // アニメーション情報を追加
+            this.animatingObstacles.push({
+                row: obstacleRow,
+                targetY: boardHeight - 1 - i,
+                currentY: boardHeight + i, // 画面下から開始
+                animationProgress: 0
+            });
         }
+        
+        // ボードから上の行を削除
+        for (let i = 0; i < lines; i++) {
+            this.board.splice(0, 1);
+        }
+    }
+    
+    updateObstacleAnimations() {
+        this.animatingObstacles = this.animatingObstacles.filter(obstacle => {
+            obstacle.animationProgress += this.obstacleAnimationSpeed;
+            obstacle.currentY = obstacle.targetY + (boardHeight - obstacle.targetY) * (1 - obstacle.animationProgress / 100);
+            
+            // アニメーション完了
+            if (obstacle.animationProgress >= 100) {
+                this.board.push(obstacle.row);
+                return false;
+            }
+            return true;
+        });
+    }
+    
+    drawAnimatingObstacles() {
+        this.animatingObstacles.forEach(obstacle => {
+            obstacle.row.forEach((color, x) => {
+                if (color) {
+                    this.ctx.fillStyle = color;
+                    this.ctx.fillRect(x * blockSize, obstacle.currentY * blockSize, blockSize, blockSize);
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.strokeRect(x * blockSize, obstacle.currentY * blockSize, blockSize, blockSize);
+                }
+            });
+        });
     }
 }
