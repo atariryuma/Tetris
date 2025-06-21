@@ -25,17 +25,7 @@ const shapes = [
     { shape: [[1, 1, 0], [0, 1, 1]], color: "#00FF00" }, // Sテトリミノ
     { shape: [[0, 1, 1], [1, 1, 0]], color: "#FF0000" }, // Zテトリミノ
     { shape: [[1, 1, 1], [1, 0, 0]], color: "#0000FF" }, // Jテトリミノ
-    { shape: [[1, 1, 1], [0, 0, 1]], color: "#FF00FF" }, // Lテトリミノ
-
-    // 特殊ブロック
-    { shape: [[1]], color: "#FF00FF", type: 'bomb' }, // 爆弾ブロック
-    { shape: [[1]], color: "#FFD700", type: 'scoreBooster' }, // スコアブースターブロック
-    { shape: [[1]], color: "#00FFFF", type: 'slowMotion' }, // スローモーションブロック
-    { shape: [[1]], color: "#00FF00", type: 'shield' }, // シールドブロック
-    { shape: [[1]], color: "#FFFFFF", type: 'invisible' }, // 透明ブロック
-    { shape: [[1]], color: "#FF69B4", type: 'random' }, // ランダムブロック
-    { shape: [[1]], color: "#8B0000", type: 'health' }, // ヘルスブロック
-    { shape: [[1]], color: "#808080", type: 'blind' } // ブラインドブロック
+    { shape: [[1, 1, 1], [0, 0, 1]], color: "#FF00FF" }  // Lテトリミノ
 ];
 
 function getRandomShape() {
@@ -59,6 +49,7 @@ let gameActive = false;  // ゲームのアクティブ状態を管理
 document.getElementById('startButton').addEventListener('click', () => {
     gameActive = true;
     initializePlayers();
+    assignGamepadsToPlayers();
     requestFullScreen();
     resetGame();
     gameLoop();
@@ -81,6 +72,8 @@ document.getElementById('togglePlayer3').addEventListener('click', () => {
 
 // キーボード入力イベントを登録
 document.addEventListener('keydown', handleKeyboardInput);
+window.addEventListener('gamepadconnected', assignGamepadsToPlayers);
+window.addEventListener('gamepaddisconnected', assignGamepadsToPlayers);
 
 function toggleCanvasVisibility(canvas, isVisible) {
     canvas.style.display = isVisible ? 'block' : 'none';
@@ -101,10 +94,22 @@ function requestFullScreen() {
 
 function initializePlayers() {
     players = [
-        new Player('Player 1', ctx1, '#00FFFF', 0),
-        new Player('Player 2', ctx2, '#FF00FF', 1),
-        new Player('Player 3', ctx3, '#00FF00', 2)
+        new Player('Player 1', ctx1, '#00FFFF', null),
+        new Player('Player 2', ctx2, '#FF00FF', null),
+        new Player('Player 3', ctx3, '#00FF00', null)
     ];
+    assignGamepadsToPlayers();
+}
+
+function assignGamepadsToPlayers() {
+    const connected = [];
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (let i = 0; i < pads.length; i++) {
+        if (pads[i]) connected.push(i);
+    }
+    players.forEach((player, index) => {
+        player.gamepadIndex = connected[index] !== undefined ? connected[index] : null;
+    });
 }
 
 function resetGame() {
@@ -165,9 +170,11 @@ function checkGameOver() {
 function handleControllerInput() {
     const gamepads = navigator.getGamepads();
     players.forEach(player => {
-        const gamepad = gamepads[player.gamepadIndex];
-        if (gamepad) {
-            player.handleControllerInput(gamepad);
+        if (player.gamepadIndex !== null) {
+            const gamepad = gamepads[player.gamepadIndex];
+            if (gamepad) {
+                player.handleControllerInput(gamepad);
+            }
         }
     });
 }
