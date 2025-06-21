@@ -2,9 +2,17 @@
 Main entry point for the Tetris game.
 """
 
-import pygame
 import sys
 import os
+
+try:
+    import pygame
+except ModuleNotFoundError:
+    print("Error: pygame is not installed.")
+    print("Please run 'pip install -r requirements.txt' to install dependencies.")
+    print("Alternatively, launch the game via 'run_game.sh' or 'run_game.bat'.")
+    sys.exit(1)
+
 from constants import *
 from game_manager import GameManager
 from font_manager import cleanup_fonts
