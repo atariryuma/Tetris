@@ -400,10 +400,14 @@ function Player(name, ctx, color, gamepadIndex) {
         while (moveDown(this)) {
             // ピースを可能な限り下へ移動
         }
-        placeShape(this);  // 最終位置にピースを固定
-        const clearedLines = clearLines(this);  // ラインを消去
+        const clearedLines = placeShape(this);  // 最終位置にピースを固定し、消去ライン数を取得
         addObstacleBlocks(this, clearedLines);  // 相手プレイヤーに邪魔ブロックを追加
-        this.setNextShape();  // 修正: 次のブロックに切り替える
+        if (resetPlayer(this)) {
+            if (checkGameOver()) {
+                endGame();
+                return;
+            }
+        }
     };
 
     // 追加: 次のブロックに切り替えるメソッド    
