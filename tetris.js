@@ -1,26 +1,224 @@
 // ゲームの設定と定数
-const canvas1 = document.getElementById("player1Canvas");
-const ctx1 = canvas1.getContext("2d");
-const canvas2 = document.getElementById("player2Canvas");
-const ctx2 = canvas2.getContext("2d");
-const canvas3 = document.getElementById("player3Canvas");
-const ctx3 = canvas3.getContext("2d");
 const blockSize = 32;
 const boardWidth = 10;
 const boardHeight = 20;
 const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
 
-// 特殊ブロックの種類と出現確率
-const specialBlockTypes = ['bomb', 'shield'];
-const SPECIAL_BLOCK_CHANCE = 0.1; // 10% の確率で特殊ブロックを生成
+// 汎用コントローラー用ボタンマッピングシステム
+class UniversalGamepadMapper {
+    constructor() {
+        // 標準的なゲームパッドボタンマッピング（Standard Gamepad Layout）
+        this.standardMapping = {
+            // Face buttons
+            'A': [0],           // A/Cross
+            'B': [1],           // B/Circle  
+            'X': [2],           // X/Square
+            'Y': [3],           // Y/Triangle
+            
+            // Shoulder buttons
+            'LB': [4],          // Left Bumper
+            'RB': [5],          // Right Bumper
+            'LT': [6],          // Left Trigger
+            'RT': [7],          // Right Trigger
+            
+            // Menu buttons
+            'SELECT': [8],      // Select/Share
+            'START': [9],       // Start/Options
+            'LS': [10],         // Left Stick Click
+            'RS': [11],         // Right Stick Click
+            
+            // D-pad (multiple possible mappings)
+            'DPAD_UP': [12, 16],
+            'DPAD_DOWN': [13, 17], 
+            'DPAD_LEFT': [14, 18],
+            'DPAD_RIGHT': [15, 19],
+            
+            // Additional mappings for various controllers
+            'EXTRA1': [16], 'EXTRA2': [17], 'EXTRA3': [18], 'EXTRA4': [19],
+            'EXTRA5': [20], 'EXTRA6': [21], 'EXTRA7': [22], 'EXTRA8': [23]
+        };
+        
+        // Xbox One specific optimizations
+        this.xboxMapping = {
+            'A': [0], 'B': [1], 'X': [2], 'Y': [3],
+            'LB': [4], 'RB': [5], 'LT': [6], 'RT': [7],
+            'SELECT': [8], 'START': [9], 'LS': [10], 'RS': [11],
+            'DPAD_UP': [12], 'DPAD_DOWN': [13], 'DPAD_LEFT': [14], 'DPAD_RIGHT': [15]
+        };
+    }
+    
+    detectControllerType(gamepad) {
+        const id = gamepad.id.toLowerCase();
+        if (id.includes('xbox') || id.includes('045e')) {
+            return 'xbox';
+        } else if (id.includes('playstation') || id.includes('sony') || id.includes('054c')) {
+            return 'playstation';
+        } else if (id.includes('nintendo') || id.includes('057e')) {
+            return 'nintendo';
+        }
+        return 'generic';
+    }
+    
+    getMapping(gamepad) {
+        const type = this.detectControllerType(gamepad);
+        switch (type) {
+            case 'xbox':
+                return this.xboxMapping;
+            default:
+                return this.standardMapping;
+        }
+    }
+    
+    isButtonPressed(gamepad, action) {
+        const mapping = this.getMapping(gamepad);
+        const buttonIndices = mapping[action] || [];
+        
+        return buttonIndices.some(buttonIndex => {
+            const button = gamepad.buttons[buttonIndex];
+            return button && button.pressed;
+        });
+    }
+    
+    getAxisValue(gamepad, axisIndex, deadzone = 0.1) {
+        if (!gamepad.axes[axisIndex]) return 0;
+        const value = gamepad.axes[axisIndex];
+        return Math.abs(value) > deadzone ? value : 0;
+    }
+    
+    detectPressedButtons(gamepad) {
+        const pressed = [];
+        for (let i = 0; i < gamepad.buttons.length; i++) {
+            if (gamepad.buttons[i] && gamepad.buttons[i].pressed) {
+                pressed.push(i);
+            }
+        }
+        return pressed;
+    }
+}
 
-const keyBindings = [
-    { left: 'ArrowLeft', right: 'ArrowRight', down: 'ArrowDown', rotate: 'z', hardDrop: 'ArrowUp', flip: 'x' },
-    { left: 'a', right: 'd', down: 's', rotate: 'w', hardDrop: 'q', flip: 'e' },
-    { left: 'j', right: 'l', down: 'k', rotate: 'i', hardDrop: 'u', flip: 'o' }
-];
-canvas1.width = canvas2.width = canvas3.width = boardWidth * blockSize;
-canvas1.height = canvas2.height = canvas3.height = boardHeight * blockSize;
+// グローバルGamepad管理システム
+class GamepadManager {
+    constructor() {
+        this.assignments = new Map(); // gamepadIndex -> playerId
+        this.playerAssignments = new Map(); // playerId -> gamepadIndex
+        this.availableGamepads = [];
+        this.updateInterval = null;
+    }
+    
+    startMonitoring() {
+        this.updateAvailableGamepads();
+        this.updateInterval = setInterval(() => {
+            this.updateAvailableGamepads();
+        }, 1000);
+    }
+    
+    stopMonitoring() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+    }
+    
+    updateAvailableGamepads() {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        this.availableGamepads = [];
+        
+        console.log('Updating gamepad list, found', gamepads.length, 'gamepad slots');
+        
+        for (let i = 0; i < gamepads.length; i++) {
+            if (gamepads[i]) {
+                console.log(`Gamepad ${i}: ${gamepads[i].id}, connected: ${gamepads[i].connected}`);
+                this.availableGamepads.push({
+                    index: i,
+                    id: gamepads[i].id,
+                    gamepad: gamepads[i]
+                });
+            }
+        }
+        
+        console.log('Available gamepads after update:', this.availableGamepads.length);
+        
+        // 切断されたゲームパッドの割り当てを削除
+        for (let [gamepadIndex, playerId] of this.assignments.entries()) {
+            if (!this.availableGamepads.find(gp => gp.index === gamepadIndex)) {
+                console.log(`Gamepad ${gamepadIndex} disconnected, removing assignment from Player ${playerId}`);
+                this.assignments.delete(gamepadIndex);
+                this.playerAssignments.delete(playerId);
+            }
+        }
+    }
+    
+    forceRefreshGamepads() {
+        // Force a fresh check of gamepads by accessing the API multiple times
+        for (let i = 0; i < 5; i++) {
+            navigator.getGamepads();
+        }
+        this.updateAvailableGamepads();
+    }
+    
+    assignGamepadToPlayer(playerId) {
+        // 既に割り当てられている場合はスキップ
+        if (this.playerAssignments.has(playerId)) {
+            const existingIndex = this.playerAssignments.get(playerId);
+            console.log(`Player ${playerId} already has gamepad ${existingIndex}`);
+            return existingIndex;
+        }
+        
+        // 最新のゲームパッド情報を取得
+        this.updateAvailableGamepads();
+        
+        // 利用可能な未割り当てのゲームパッドを検索
+        for (let gamepadInfo of this.availableGamepads) {
+            if (!this.assignments.has(gamepadInfo.index)) {
+                this.assignments.set(gamepadInfo.index, playerId);
+                this.playerAssignments.set(playerId, gamepadInfo.index);
+                console.log(`Assigned gamepad ${gamepadInfo.index} (${gamepadInfo.id}) to Player ${playerId}`);
+                return gamepadInfo.index;
+            }
+        }
+        
+        console.log(`No available gamepad for Player ${playerId}. Available gamepads:`, this.availableGamepads.length);
+        console.log(`Current assignments:`, Object.fromEntries(this.assignments));
+        return null;
+    }
+    
+    unassignPlayer(playerId) {
+        const gamepadIndex = this.playerAssignments.get(playerId);
+        if (gamepadIndex !== undefined) {
+            this.assignments.delete(gamepadIndex);
+            this.playerAssignments.delete(playerId);
+            console.log(`Unassigned gamepad ${gamepadIndex} from Player ${playerId}`);
+        }
+    }
+    
+    getGamepadForPlayer(playerId) {
+        const gamepadIndex = this.playerAssignments.get(playerId);
+        if (gamepadIndex === undefined) return null;
+        
+        const gamepads = navigator.getGamepads();
+        return gamepads[gamepadIndex] || null;
+    }
+    
+    isGamepadAssigned(gamepadIndex) {
+        return this.assignments.has(gamepadIndex);
+    }
+    
+    getAssignmentInfo() {
+        const info = {};
+        for (let [gamepadIndex, playerId] of this.assignments.entries()) {
+            const gamepadInfo = this.availableGamepads.find(gp => gp.index === gamepadIndex);
+            info[playerId] = {
+                gamepadIndex,
+                gamepadId: gamepadInfo ? gamepadInfo.id : 'Unknown'
+            };
+        }
+        return info;
+    }
+}
+
+// グローバルインスタンス
+const gamepadManager = new GamepadManager();
+const gamepadMapper = new UniversalGamepadMapper();
 
 const shapes = [
     { shape: [[1, 1, 1, 1]], color: "#00FFFF" }, // Iテトリミノ
@@ -34,12 +232,7 @@ const shapes = [
 
 function getRandomShape() {
     const randomIndex = Math.floor(Math.random() * shapes.length);
-    const shape = deepCopyShape(shapes[randomIndex]);
-    if (Math.random() < SPECIAL_BLOCK_CHANCE) {
-        const typeIndex = Math.floor(Math.random() * specialBlockTypes.length);
-        shape.type = specialBlockTypes[typeIndex];
-    }
-    return shape;
+    return deepCopyShape(shapes[randomIndex]);
 }
 
 function deepCopyShape(shape) {
@@ -50,618 +243,460 @@ function deepCopyShape(shape) {
     };
 }
 
-
-let players = [];
-let activePlayers = [true, true, true]; // 1P, 2P, 3P のオンオフ状態を管理
-let gameActive = false;  // ゲームのアクティブ状態を管理
-
-document.getElementById('startButton').addEventListener('click', () => {
-    gameActive = true;
-    initializePlayers();
-    assignGamepadsToPlayers();
-    requestFullScreen();
-    resetGame();
-    gameLoop();
-});
-
-document.getElementById('togglePlayer1').addEventListener('click', () => {
-    activePlayers[0] = !activePlayers[0];
-    toggleCanvasVisibility(canvas1, activePlayers[0]);
-});
-
-document.getElementById('togglePlayer2').addEventListener('click', () => {
-    activePlayers[1] = !activePlayers[1];
-    toggleCanvasVisibility(canvas2, activePlayers[1]);
-});
-
-document.getElementById('togglePlayer3').addEventListener('click', () => {
-    activePlayers[2] = !activePlayers[2];
-    toggleCanvasVisibility(canvas3, activePlayers[2]);
-});
-
-// キーボード入力イベントを登録
-document.addEventListener('keydown', handleKeyboardInput);
-window.addEventListener('gamepadconnected', assignGamepadsToPlayers);
-window.addEventListener('gamepaddisconnected', assignGamepadsToPlayers);
-
-function toggleCanvasVisibility(canvas, isVisible) {
-    canvas.style.display = isVisible ? 'block' : 'none';
-}
-
-function requestFullScreen() {
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen();
-    } else if (elem.mozRequestFullScreen) { // Firefox
-        elem.mozRequestFullScreen();
-    } else if (elem.webkitRequestFullscreen) { // Chrome, Safari and Opera
-        elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) { // IE/Edge
-        elem.msRequestFullscreen();
+// Tetrisクラスの定義
+class Tetris {
+    constructor(playerId, mode) {
+        this.playerId = playerId;
+        this.mode = mode; // 'ON' (human), 'CPU', or 'OFF'
+        this.canvas = document.getElementById(`player${playerId}Canvas`);
+        this.ctx = this.canvas.getContext('2d');
+        this.nextCanvas = document.getElementById(`player${playerId}Next`);
+        this.nextCtx = this.nextCanvas.getContext('2d');
+        this.scoreElement = document.getElementById(`player${playerId}Score`);
+        
+        this.canvas.width = boardWidth * blockSize;
+        this.canvas.height = boardHeight * blockSize;
+        this.nextCanvas.width = 4 * (blockSize / 4);
+        this.nextCanvas.height = 4 * (blockSize / 4);
+        
+        this.board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
+        this.currentShape = null;
+        this.nextShape = null;
+        this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
+        this.ghostPosition = { x: 0, y: 0 };
+        this.dropInterval = 700;
+        this.lastDropTime = 0;
+        this.gameOver = false;
+        this.score = 0;
+        
+        this.lastInputTime = {
+            left: 0,
+            right: 0,
+            down: 0,
+            rotate: 0,
+            hardDrop: 0
+        };
+        
+        // CPUのAI設定
+        this.cpuMoveInterval = 500;
+        this.lastCPUMoveTime = 0;
+        
+        // Gamepad設定
+        this.gamepadButtonStates = {};
+        
+        // Animation設定
+        this.animatingObstacles = [];
+        this.obstacleAnimationSpeed = 8; // pixels per frame
     }
-}
 
-function initializePlayers() {
-    players = [
-        new Player('Player 1', ctx1, '#00FFFF', null),
-        new Player('Player 2', ctx2, '#FF00FF', null),
-        new Player('Player 3', ctx3, '#00FF00', null)
-    ];
-    assignGamepadsToPlayers();
-}
-
-function assignGamepadsToPlayers() {
-    const connected = [];
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    for (let i = 0; i < pads.length; i++) {
-        if (pads[i]) connected.push(i);
+    assignGamepad() {
+        return gamepadManager.assignGamepadToPlayer(this.playerId);
     }
-    players.forEach((player, index) => {
-        player.gamepadIndex = connected[index] !== undefined ? connected[index] : null;
-    });
-}
-
-function resetGame() {
-    players.forEach(player => {
-        player.reset();
-    });
-}
-
-function gameLoop() {
-    if (!gameActive) {
-        return;  // ゲームが非アクティブの場合はループを終了
+    
+    hasGamepadInput() {
+        const gamepad = gamepadManager.getGamepadForPlayer(this.playerId);
+        if (!gamepad) {
+            return false;
+        }
+        
+        return gamepad.buttons.some(button => button.pressed) || 
+               Math.abs(gamepad.axes[0]) > 0.1 || Math.abs(gamepad.axes[1]) > 0.1;
     }
-    handleControllerInput();
-    players.forEach((player, index) => {
-        if (activePlayers[index] && Date.now() - player.lastDropTime > player.dropInterval) {
-            player.lastDropTime = Date.now();
-            if (!moveDown(player)) {
-                const clearedLines = placeShape(player);
-                addObstacleBlocks(player, clearedLines);
-                if (resetPlayer(player)) {
-                    if (checkGameOver()) {
-                        endGame();
-                        return;
-                    }
+    
+    getAssignedGamepad() {
+        return gamepadManager.getGamepadForPlayer(this.playerId);
+    }
+
+    start() {
+        this.currentShape = getRandomShape();
+        this.nextShape = getRandomShape();
+        this.updateGhostPosition();
+        this.lastDropTime = performance.now();
+        this.lastCPUMoveTime = performance.now();
+        
+        // ゲームパッドの割り当てを試行
+        this.assignGamepad();
+        
+        this.draw();
+        this.drawNext();
+    }
+
+    update(time) {
+        if (this.gameOver) return 0;
+        
+        // Handle gamepad input if connected
+        if (this.mode === 'ON') {
+            this.handleGamepadInput(time);
+        }
+        
+        if (this.mode === 'CPU') {
+            if (time - this.lastCPUMoveTime > this.cpuMoveInterval) {
+                this.makeCPUMove();
+                this.lastCPUMoveTime = time;
+            }
+        }
+        
+        if (time - this.lastDropTime > this.dropInterval) {
+            this.lastDropTime = time;
+            if (!this.moveDown()) {
+                const clearedLines = this.placeShape();
+                this.setNextShape();
+                if (this.checkGameOver()) {
+                    this.gameOver = true;
                 }
+                this.draw();
+                this.drawNext();
+                return clearedLines;
             }
         }
-        if (activePlayers[index]) {
-            draw(player);
-        }
-    });
-    requestAnimationFrame(gameLoop);
-}
-
-function endGame() {
-    gameActive = false;  // ゲームを非アクティブに設定
-    const activePlayersList = players.filter((player, index) => activePlayers[index]);
-    if (activePlayersList.length === 1) {
-        alert(activePlayersList[0].name + " wins!");
+        
+        this.draw();
+        this.drawNext();
+        return 0;
     }
-}
-
-function resetPlayer(player) {
-    player.setNextShape();  // 次のブロックに切り替える
-    if (player.gameOver) {
-        activePlayers[players.indexOf(player)] = false;
-        toggleCanvasVisibility(player.ctx.canvas, false);
-        return true;  // ゲームオーバーを示す
-    }
-    return false;
-}
-
-function checkGameOver() {
-    return activePlayers.filter(isActive => isActive).length === 1;
-}
-
-// コントローラー入力を処理
-function handleControllerInput() {
-    const gamepads = navigator.getGamepads();
-    players.forEach(player => {
-        if (player.gamepadIndex !== null) {
-            const gamepad = gamepads[player.gamepadIndex];
-            if (gamepad) {
-                player.handleControllerInput(gamepad);
-            }
+    
+    handleGamepadInput(time) {
+        const gamepad = this.getAssignedGamepad();
+        if (!gamepad) return;
+        
+        const inputInterval = INPUT_INTERVAL;
+        
+        // デバッグ: コントローラータイプとボタン状態をログ出力
+        if (Math.random() < 0.005) { // 0.5%の確率でログ出力
+            const controllerType = gamepadMapper.detectControllerType(gamepad);
+            const pressedButtons = gamepadMapper.detectPressedButtons(gamepad);
+            console.log(`Player ${this.playerId} [${controllerType}] pressed buttons:`, pressedButtons);
         }
-    });
-}
-
-// キーボード入力を処理
-function handleKeyboardInput(event) {
-    if (!gameActive) return;
-    players.forEach((player, index) => {
-        if (!activePlayers[index]) return;
-        const binding = keyBindings[index];
-        const last = player.lastInputTime;
-        const key = event.key;
-
-        if (key === binding.hardDrop && Date.now() - last.hardDrop > INPUT_INTERVAL) {
-            player.hardDrop();
-            last.hardDrop = Date.now();
-        } else if (key === binding.left && Date.now() - last.left > INPUT_INTERVAL) {
-            if (isValidMove(player.currentShape.shape, player.currentPosition.x - 1, player.currentPosition.y, player)) {
-                player.currentPosition.x -= 1;
-                last.left = Date.now();
-                player.updateGhostPosition();
-            }
-        } else if (key === binding.right && Date.now() - last.right > INPUT_INTERVAL) {
-            if (isValidMove(player.currentShape.shape, player.currentPosition.x + 1, player.currentPosition.y, player)) {
-                player.currentPosition.x += 1;
-                last.right = Date.now();
-                player.updateGhostPosition();
-            }
-        } else if (key === binding.down && Date.now() - last.down > INPUT_INTERVAL) {
-            if (isValidMove(player.currentShape.shape, player.currentPosition.x, player.currentPosition.y + 1, player)) {
-                player.currentPosition.y += 1;
-                last.down = Date.now();
-                player.updateGhostPosition();
-            }
-        } else if (key === binding.rotate && Date.now() - last.rotate > INPUT_INTERVAL) {
-            const rotatedShape = rotate(player.currentShape.shape);
-            if (isValidMove(rotatedShape, player.currentPosition.x, player.currentPosition.y, player)) {
-                player.currentShape.shape = rotatedShape;
-                last.rotate = Date.now();
-                player.updateGhostPosition();
+        
+        // 汎用ボタンチェック関数
+        const checkAction = (action, gameAction, inputType) => {
+            if (gamepadMapper.isButtonPressed(gamepad, action)) {
+                const actionKey = `${action}_${this.playerId}`;
+                const wasPressed = this.gamepadButtonStates[actionKey] || false;
+                this.gamepadButtonStates[actionKey] = true;
+                
+                // 新しく押された場合のみ実行
+                if (!wasPressed && time - this.lastInputTime[inputType] > inputInterval) {
+                    gameAction();
+                    this.lastInputTime[inputType] = time;
+                    return true;
+                }
             } else {
-                const leftPos = { x: player.currentPosition.x - 1, y: player.currentPosition.y };
-                const rightPos = { x: player.currentPosition.x + 1, y: player.currentPosition.y };
-                if (isValidMove(rotatedShape, leftPos.x, leftPos.y, player)) {
-                    player.currentShape.shape = rotatedShape;
-                    player.currentPosition = leftPos;
-                    last.rotate = Date.now();
-                    player.updateGhostPosition();
-                } else if (isValidMove(rotatedShape, rightPos.x, rightPos.y, player)) {
-                    player.currentShape.shape = rotatedShape;
-                    player.currentPosition = rightPos;
-                    last.rotate = Date.now();
-                    player.updateGhostPosition();
-                }
+                this.gamepadButtonStates[`${action}_${this.playerId}`] = false;
             }
-        } else if (key === binding.flip && Date.now() - last.flip > INPUT_INTERVAL) {
-            const flippedShape = flip(player.currentShape.shape);
-            if (isValidMove(flippedShape, player.currentPosition.x, player.currentPosition.y, player)) {
-                player.currentShape.shape = flippedShape;
-                last.flip = Date.now();
-                player.updateGhostPosition();
+            return false;
+        };
+        
+        // アナログスティック対応（Xbox Oneコントローラー最適化）
+        const leftStickX = gamepadMapper.getAxisValue(gamepad, 0, 0.3); // デッドゾーン拡大
+        const leftStickY = gamepadMapper.getAxisValue(gamepad, 1, 0.3);
+        
+        // アナログスティック左右移動
+        if (Math.abs(leftStickX) > 0.3) {
+            const now = time;
+            if (leftStickX < -0.3 && now - this.lastInputTime.left > inputInterval) {
+                this.move(-1);
+                this.lastInputTime.left = now;
+            } else if (leftStickX > 0.3 && now - this.lastInputTime.right > inputInterval) {
+                this.move(1);
+                this.lastInputTime.right = now;
             }
         }
-    });
-}
-
-function drawBlock(ctx, x, y, color, type = null) {
-    ctx.fillStyle = color;
-    ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
-    if (type) {
-        ctx.strokeStyle = 'gold';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x * blockSize + 4, y * blockSize + 4, blockSize - 8, blockSize - 8);
-        ctx.lineWidth = 1;
+        
+        // アナログスティック下移動
+        if (leftStickY > 0.3 && time - this.lastInputTime.down > inputInterval) {
+            this.drop();
+            this.lastInputTime.down = time;
+        }
+        
+        // D-pad操作（汎用マッピング使用）
+        checkAction('DPAD_LEFT', () => this.move(-1), 'left');
+        checkAction('DPAD_RIGHT', () => this.move(1), 'right');
+        checkAction('DPAD_DOWN', () => this.drop(), 'down');
+        checkAction('DPAD_UP', () => this.hardDrop(), 'hardDrop');
+        
+        // ボタン操作（フェイスボタンで回転）
+        checkAction('A', () => this.rotate(), 'rotate') ||
+        checkAction('B', () => this.rotate(), 'rotate') ||
+        checkAction('X', () => this.rotate(), 'rotate') ||
+        checkAction('Y', () => this.rotate(), 'rotate');
+        
+        // 追加操作（肩ボタンでも回転可能）
+        checkAction('RB', () => this.rotate(), 'rotate') ||
+        checkAction('LB', () => this.hardDrop(), 'hardDrop');
     }
-}
 
-function draw(player) {
-    const ctx = player.ctx;
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    player.board.forEach((row, y) => {
-        row.forEach((cell, x) => {
-            if (cell) {
-                const color = cell.color || cell;
-                const type = cell.type || null;
-                drawBlock(ctx, x, y, color, type);
-            }
-        });
-    });
-    drawShape(ctx, player.currentShape.shape, player.currentPosition.x, player.currentPosition.y, player.currentShape.color, player.currentShape.type);
-    drawGhostShape(ctx, player.currentShape.shape, player.ghostPosition.x, player.ghostPosition.y, player.currentShape.color);
-    drawScore(player);  // スコアを描画
-}
-
-function drawScore(player) {
-    const ctx = player.ctx;
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'white';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${player.name} Score: ${player.score}`, 10, 10);
-}
-
-function drawShape(ctx, shape, x, y, color, type = null) {
-    shape.forEach((row, dy) => {
-        row.forEach((cell, dx) => {
-            if (cell) {
-                drawBlock(ctx, x + dx, y + dy, color, type);
-            }
-        });
-    });
-}
-
-function drawGhostShape(ctx, shape, x, y, color) {
-    ctx.globalAlpha = 0.5;
-    drawShape(ctx, shape, x, y, color, null);
-    ctx.globalAlpha = 1;
-}
-
-function Player(name, ctx, color, gamepadIndex) {
-    this.name = name;
-    this.ctx = ctx;
-    this.board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
-    this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-    this.currentShape = getRandomShape();  // 修正: 初期値をランダムなブロックに設定
-    this.nextShape = getRandomShape();
-    this.dropInterval = 700;
-    this.lastDropTime = Date.now();
-    this.gameOver = false;
-    this.color = color;
-    this.gamepadIndex = gamepadIndex;
-    this.ghostPosition = { x: 0, y: 0 };
-    this.score = 0;
-    this.shielded = false;
-
-    // 追加: コントローラー入力の最後の時間を管理するオブジェクト
-    this.lastInputTime = {
-        left: 0,
-        right: 0,
-        down: 0,
-        rotate: 0,
-        hardDrop: 0,
-        flip: 0
-    };
-
-    // コントローラー入力を処理するメソッド
-    this.handleControllerInput = function(gamepad) {
-        const inputInterval = INPUT_INTERVAL; // ボタン入力の最小時間間隔
-
-        // ハードドロップ (十字キーの上)
-        if (gamepad.buttons[12].pressed && Date.now() - this.lastInputTime.hardDrop > inputInterval) {
-            this.hardDrop();
-            this.lastInputTime.hardDrop = Date.now();
-        }
-
-        // 左移動
-        if (gamepad.buttons[14].pressed && Date.now() - this.lastInputTime.left > inputInterval) {
-            if (isValidMove(this.currentShape.shape, this.currentPosition.x - 1, this.currentPosition.y, this)) {
-                this.currentPosition.x -= 1;
-                this.lastInputTime.left = Date.now();
-                this.updateGhostPosition();
+    makeCPUMove() {
+        // シンプルなCPUロジック
+        if (Math.random() < 0.3) {
+            if (this.canMove(-1, 0)) {
+                this.move(-1);
+            } else if (this.canMove(1, 0)) {
+                this.move(1);
             }
         }
-
-        // 右移動
-        if (gamepad.buttons[15].pressed && Date.now() - this.lastInputTime.right > inputInterval) {
-            if (isValidMove(this.currentShape.shape, this.currentPosition.x + 1, this.currentPosition.y, this)) {
-                this.currentPosition.x += 1;
-                this.lastInputTime.right = Date.now();
-                this.updateGhostPosition();
-            }
+        
+        if (Math.random() < 0.1) {
+            this.rotate();
         }
-
-        // 下移動
-        if (gamepad.buttons[13].pressed && Date.now() - this.lastInputTime.down > inputInterval) {
-            if (isValidMove(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y + 1, this)) {
-                this.currentPosition.y += 1;
-                this.lastInputTime.down = Date.now();
-                this.updateGhostPosition();
-            }
+        
+        if (Math.random() < 0.5) {
+            this.drop();
         }
+    }
 
-        // 回転
-        if (gamepad.buttons[0].pressed && Date.now() - this.lastInputTime.rotate > inputInterval) {
-            const rotatedShape = rotate(this.currentShape.shape);
-            if (isValidMove(rotatedShape, this.currentPosition.x, this.currentPosition.y, this)) {
-                this.currentShape.shape = rotatedShape;
-                this.lastInputTime.rotate = Date.now();
-                this.updateGhostPosition();
-            } else {
-                // 回転できない場合は、左右に1ブロック移動して回転を試みる
-                const leftPosition = { x: this.currentPosition.x - 1, y: this.currentPosition.y };
-                const rightPosition = { x: this.currentPosition.x + 1, y: this.currentPosition.y };
-                if (isValidMove(rotatedShape, leftPosition.x, leftPosition.y, this)) {
+    move(dx) {
+        if (this.canMove(dx, 0)) {
+            this.currentPosition.x += dx;
+            this.updateGhostPosition();
+        }
+    }
+
+    drop() {
+        if (this.canMove(0, 1)) {
+            this.currentPosition.y += 1;
+            this.updateGhostPosition();
+        }
+    }
+
+    rotate() {
+        const rotatedShape = this.rotateMatrix(this.currentShape.shape);
+        if (this.isValidMove(rotatedShape, this.currentPosition.x, this.currentPosition.y)) {
+            this.currentShape.shape = rotatedShape;
+            this.updateGhostPosition();
+        } else {
+            // Wall kick
+            const offsets = [-1, 1, -2, 2];
+            for (let offset of offsets) {
+                if (this.isValidMove(rotatedShape, this.currentPosition.x + offset, this.currentPosition.y)) {
                     this.currentShape.shape = rotatedShape;
-                    this.currentPosition = leftPosition;
-                    this.lastInputTime.rotate = Date.now();
+                    this.currentPosition.x += offset;
                     this.updateGhostPosition();
-                } else if (isValidMove(rotatedShape, rightPosition.x, rightPosition.y, this)) {
-                    this.currentShape.shape = rotatedShape;
-                    this.currentPosition = rightPosition;
-                    this.lastInputTime.rotate = Date.now();
-                    this.updateGhostPosition();
+                    break;
                 }
             }
         }
+    }
 
-        // 反転 (フリップ)
-        if (gamepad.buttons[1].pressed && Date.now() - this.lastInputTime.flip > inputInterval) {
-            const flippedShape = flip(this.currentShape.shape);
-            if (isValidMove(flippedShape, this.currentPosition.x, this.currentPosition.y, this)) {
-                this.currentShape.shape = flippedShape;
-                this.lastInputTime.flip = Date.now();
-                this.updateGhostPosition();
+    hardDrop() {
+        let clearedLines = 0;
+        while (this.canMove(0, 1)) {
+            this.currentPosition.y += 1;
+        }
+        clearedLines = this.placeShape();
+        this.setNextShape();
+        if (this.checkGameOver()) {
+            this.gameOver = true;
+        }
+        this.draw();
+        this.drawNext();
+        return clearedLines;
+    }
+
+    canMove(dx, dy) {
+        return this.isValidMove(this.currentShape.shape, this.currentPosition.x + dx, this.currentPosition.y + dy);
+    }
+
+    moveDown() {
+        if (this.canMove(0, 1)) {
+            this.currentPosition.y += 1;
+            return true;
+        }
+        return false;
+    }
+
+    isValidMove(shape, x, y) {
+        return shape.every((row, dy) => {
+            return row.every((cell, dx) => {
+                let newX = x + dx;
+                let newY = y + dy;
+                return !cell || (newX >= 0 && newX < boardWidth && newY < boardHeight && !this.board[newY][newX]);
+            });
+        });
+    }
+
+    placeShape() {
+        this.currentShape.shape.forEach((row, dy) => {
+            row.forEach((cell, dx) => {
+                if (cell) {
+                    this.board[this.currentPosition.y + dy][this.currentPosition.x + dx] = this.currentShape.color;
+                }
+            });
+        });
+        
+        let clearedLines = 0;
+        for (let y = this.board.length - 1; y >= 0; y--) {
+            if (this.board[y].every(cell => cell)) {
+                this.board.splice(y, 1);
+                this.board.unshift(Array(boardWidth).fill(0));
+                clearedLines++;
+                y++;
             }
         }
-    };
+        
+        this.score += this.calculateScore(clearedLines);
+        this.updateScore();
+        return clearedLines;
+    }
 
-    // ゴーストピースの位置を更新するメソッド
-    this.updateGhostPosition = function() {
-        let ghostY = this.currentPosition.y;
-        while (isValidMove(this.currentShape.shape, this.currentPosition.x, ghostY + 1, this)) {
-            ghostY++;
-        }
-        this.ghostPosition = { x: this.currentPosition.x, y: ghostY };
-    };
+    calculateScore(clearedLines) {
+        const scores = [0, 100, 300, 500, 800];
+        return scores[clearedLines] || 0;
+    }
 
-    // ハードドロップを実行するメソッド
-    this.hardDrop = function() {
-        while (moveDown(this)) {
-            // ピースを可能な限り下へ移動
-        }
-        const clearedLines = placeShape(this);  // 最終位置にピースを固定し、消去ライン数を取得
-        addObstacleBlocks(this, clearedLines);  // 相手プレイヤーに邪魔ブロックを追加
-        if (resetPlayer(this)) {
-            if (checkGameOver()) {
-                endGame();
-                return;
-            }
-        }
-    };
-
-    // 追加: 次のブロックに切り替えるメソッド    
-    this.setNextShape = function() {
+    setNextShape() {
         this.currentShape = deepCopyShape(this.nextShape);
         this.nextShape = getRandomShape();
         this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-        if (!isValidMove(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y, this)) {
-            this.gameOver = true;
-        }
-        this.updateGhostPosition();
-    };
-
-    this.reset = function() {
-        this.board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
-        this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-        this.currentShape = getRandomShape();
-        this.nextShape = getRandomShape();
-        this.dropInterval = 700;
-        this.lastDropTime = Date.now();
-        this.gameOver = false;
-        this.score = 0;
         this.updateGhostPosition();
     }
-}
 
-function rotate(matrix) {
-    const result = [];
-    for (let col = 0; col < matrix[0].length; col++) {
-        const newRow = [];
-        for (let row = matrix.length - 1; row >= 0; row--) {
-            newRow.push(matrix[row][col]);
+    checkGameOver() {
+        return !this.isValidMove(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y);
+    }
+
+    updateGhostPosition() {
+        let ghostY = this.currentPosition.y;
+        while (this.isValidMove(this.currentShape.shape, this.currentPosition.x, ghostY + 1)) {
+            ghostY++;
         }
-        result.push(newRow);
+        this.ghostPosition = { x: this.currentPosition.x, y: ghostY };
     }
-    return result;
-}
 
-function flip(matrix) {
-    // Create new rows so the original matrix remains unmodified
-    return matrix.map(row => row.slice().reverse());
-}
-
-function isValidMove(shape, x, y, player) {
-    return shape.every((row, dy) => {
-        return row.every((cell, dx) => {
-            let newX = x + dx;
-            let newY = y + dy;
-            return !cell || (newX >= 0 && newX < boardWidth && newY < boardHeight && !player.board[newY][newX]);
-        });
-    });
-}
-
-function moveDown(player) {
-    if (isValidMove(player.currentShape.shape, player.currentPosition.x, player.currentPosition.y + 1, player)) {
-        player.currentPosition.y++;
-        return true;
+    rotateMatrix(matrix) {
+        const result = [];
+        for (let col = 0; col < matrix[0].length; col++) {
+            const newRow = [];
+            for (let row = matrix.length - 1; row >= 0; row--) {
+                newRow.push(matrix[row][col]);
+            }
+            result.push(newRow);
+        }
+        return result;
     }
-    return false;
-}
 
-function placeShape(player) {
-    const specialBlocks = [];
-    player.currentShape.shape.forEach((row, dy) => {
-        row.forEach((cell, dx) => {
-            if (cell) {
-                player.board[player.currentPosition.y + dy][player.currentPosition.x + dx] = {
-                    color: player.currentShape.color,
-                    type: player.currentShape.type || null
-                };
-                if (player.currentShape.type) {
-                    specialBlocks.push({ x: player.currentPosition.x + dx, y: player.currentPosition.y + dy, type: player.currentShape.type });
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Update and draw animating obstacles
+        this.updateObstacleAnimations();
+        
+        // Draw board
+        this.board.forEach((row, y) => {
+            row.forEach((color, x) => {
+                if (color) {
+                    this.drawBlock(x, y, color);
                 }
-            }
+            });
         });
-    });
-    applySpecialBlockEffects(player, specialBlocks); // 常にエフェクトを表示するように変更
-    return clearLines(player, specialBlocks);
-}
-
-function clearLines(player, specialBlocks = []) {
-    let clearedLines = 0;
-    for (let y = player.board.length - 1; y >= 0; y--) {
-        if (player.board[y].every(cell => cell)) {
-            player.board.splice(y, 1);
-            player.board.unshift(Array(boardWidth).fill(0));
-            clearedLines++;
-            y++; // since the line is removed, we need to check the same line again
+        
+        // Draw animating obstacles
+        this.drawAnimatingObstacles();
+        
+        // Draw ghost shape
+        if (this.currentShape) {
+            this.drawGhostShape();
+            this.drawShape(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y, this.currentShape.color);
         }
     }
-    // スコアを更新
-    player.score += calculateScore(clearedLines);
-    return clearedLines;
-}
 
-function calculateScore(clearedLines) {
-    const scores = [0, 100, 300, 500, 800];
-    return scores[clearedLines] || 0;
-}
+    drawNext() {
+        if (!this.nextShape) return;
+        
+        this.nextCtx.clearRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
+        
+        const nextBlockSize = blockSize / 4; // Next キャンバス用のより小さいブロックサイズ
+        const startX = Math.floor((4 - this.nextShape.shape[0].length) / 2);
+        const startY = Math.floor((4 - this.nextShape.shape.length) / 2);
+        
+        this.nextShape.shape.forEach((row, dy) => {
+            row.forEach((cell, dx) => {
+                if (cell) {
+                    this.nextCtx.fillStyle = this.nextShape.color;
+                    this.nextCtx.fillRect((startX + dx) * nextBlockSize, (startY + dy) * nextBlockSize, nextBlockSize, nextBlockSize);
+                    this.nextCtx.strokeStyle = '#000';
+                    this.nextCtx.strokeRect((startX + dx) * nextBlockSize, (startY + dy) * nextBlockSize, nextBlockSize, nextBlockSize);
+                }
+            });
+        });
+    }
 
-function addObstacleBlocks(player, clearedLines) {
-    if (clearedLines === 0) return;
+    drawBlock(x, y, color) {
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+        this.ctx.strokeStyle = '#000';
+        this.ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+    }
 
-    // 対象となるプレイヤーを抽出（自分以外のアクティブなプレイヤー）
-    const targets = players.filter((p, idx) => p !== player && activePlayers[idx] && !p.shielded);
-    if (targets.length === 0) return;
+    drawShape(shape, x, y, color) {
+        shape.forEach((row, dy) => {
+            row.forEach((cell, dx) => {
+                if (cell) {
+                    this.drawBlock(x + dx, y + dy, color);
+                }
+            });
+        });
+    }
 
-    const linesPerTarget = Math.floor(clearedLines / targets.length);
-    let remainder = clearedLines % targets.length;
+    drawGhostShape() {
+        this.ctx.globalAlpha = 0.3;
+        this.drawShape(this.currentShape.shape, this.ghostPosition.x, this.ghostPosition.y, this.currentShape.color);
+        this.ctx.globalAlpha = 1;
+    }
 
-    targets.forEach(target => {
-        let linesToAdd = linesPerTarget;
-        if (remainder > 0) {
-            linesToAdd += 1;
-            remainder -= 1;
+    updateScore() {
+        if (this.scoreElement) {
+            this.scoreElement.textContent = this.score;
         }
-        for (let i = 0; i < linesToAdd; i++) {
-            target.board.splice(0, 1);
-            target.board.push(
-                Array(boardWidth)
-                    .fill(0)
-                    .map((_, index) => (index === Math.floor(boardWidth / 2) ? 0 : '#808080'))
-            );
-        }
-    });
-}
+    }
 
-// 特殊ブロックの効果を適用する関数
-function applySpecialBlockEffects(player, specialBlocks) {
-    specialBlocks.forEach(block => {
-        switch (block.type) {
-            case 'bomb':
-                applyBombEffect(player, block.x, block.y);
-                break;
-            case 'scoreBooster':
-                player.score += 500; // 追加スコア
-                showEffect(player.ctx, block.x, block.y, 'Score Boost!');
-                break;
-            case 'slowMotion':
-                applySlowMotionEffect();
-                showEffect(player.ctx, block.x, block.y, 'Slow Motion!');
-                break;
-            case 'shield':
-                applyShieldEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Shield!');
-                break;
-            case 'invisible':
-                applyInvisibleEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Invisible!');
-                break;
-            case 'random':
-                applyRandomEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Random!');
-                break;
-            case 'health':
-                applyHealthEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Health!');
-                break;
-            case 'blind':
-                applyBlindEffect(player);
-                showEffect(player.ctx, block.x, block.y, 'Blind!');
-                break;
+    addObstacle(lines) {
+        if (lines <= 0) return;
+        
+        // アニメーション付きでお邪魔ブロックを追加
+        for (let i = 0; i < lines; i++) {
+            const obstacleRow = Array(boardWidth).fill('#808080');
+            obstacleRow[Math.floor(Math.random() * boardWidth)] = 0; // ランダムな位置に穴を開ける
+            
+            // アニメーション情報を追加
+            this.animatingObstacles.push({
+                row: obstacleRow,
+                targetY: boardHeight - 1 - i,
+                currentY: boardHeight + i, // 画面下から開始
+                animationProgress: 0
+            });
         }
-    });
-}
-
-function applyBombEffect(player, x, y) {
-    const radius = 1; // 爆弾の効果範囲
-    for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-            const newX = x + dx;
-            const newY = y + dy;
-            if (newX >= 0 && newX < boardWidth && newY >= 0 && newY < boardHeight) {
-                player.board[newY][newX] = 0; // ブロックを破壊
+        
+        // ボードから上の行を削除
+        for (let i = 0; i < lines; i++) {
+            this.board.splice(0, 1);
+        }
+    }
+    
+    updateObstacleAnimations() {
+        this.animatingObstacles = this.animatingObstacles.filter(obstacle => {
+            obstacle.animationProgress += this.obstacleAnimationSpeed;
+            obstacle.currentY = obstacle.targetY + (boardHeight - obstacle.targetY) * (1 - obstacle.animationProgress / 100);
+            
+            // アニメーション完了
+            if (obstacle.animationProgress >= 100) {
+                this.board.push(obstacle.row);
+                return false;
             }
-        }
+            return true;
+        });
     }
-    showEffect(player.ctx, x, y, 'Boom!');
-}
-
-function applySlowMotionEffect() {
-    players.forEach(player => {
-        player.dropInterval *= 2; // ゲームスピードを遅くする
-        setTimeout(() => {
-            player.dropInterval /= 2; // 効果を元に戻す
-        }, 5000); // 5秒間持続
-    });
-}
-
-function applyShieldEffect(player) {
-    // 他のプレイヤーからの攻撃を防ぐシールドを付与
-    player.shielded = true;
-    setTimeout(() => {
-        player.shielded = false; // 効果を元に戻す
-    }, 5000); // 5秒間持続
-}
-
-function applyInvisibleEffect(player) {
-    player.ctx.canvas.style.opacity = 0.5; // 透明化
-    setTimeout(() => {
-        player.ctx.canvas.style.opacity = 1; // 効果を元に戻す
-    }, 5000); // 5秒間持続
-}
-
-function applyRandomEffect(player) {
-    const randomShape = getRandomShape();
-    player.currentShape = randomShape;
-    player.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
-}
-
-function applyHealthEffect(player) {
-    const targetPlayer = players.find(p => p !== player && activePlayers[players.indexOf(p)]);
-    if (targetPlayer) {
-        targetPlayer.score -= 500; // 他のプレイヤーのスコアを減少
-        if (targetPlayer.score < 0) targetPlayer.score = 0;
+    
+    drawAnimatingObstacles() {
+        this.animatingObstacles.forEach(obstacle => {
+            obstacle.row.forEach((color, x) => {
+                if (color) {
+                    this.ctx.fillStyle = color;
+                    this.ctx.fillRect(x * blockSize, obstacle.currentY * blockSize, blockSize, blockSize);
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.strokeRect(x * blockSize, obstacle.currentY * blockSize, blockSize, blockSize);
+                }
+            });
+        });
     }
 }
-
-function applyBlindEffect(player) {
-    const targetPlayer = players.find(p => p !== player && activePlayers[players.indexOf(p)]);
-    if (targetPlayer) {
-        targetPlayer.ctx.canvas.style.filter = 'blur(5px)'; // 画面をぼかす
-        setTimeout(() => {
-            targetPlayer.ctx.canvas.style.filter = 'none'; // 効果を元に戻す
-        }, 5000); // 5秒間持続
-    }
-}
-
-function showEffect(ctx, x, y, text) {
-    ctx.save();
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'yellow';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, x * blockSize + blockSize / 2, y * blockSize + blockSize / 2);
-    ctx.restore();
-}
-
-gameLoop();
