@@ -565,10 +565,11 @@
                   gameInstances.forEach(currentGame => {
                       if (currentGame.gameOver) return;
                       const clearedLines = currentGame.update(time);
-                      if (clearedLines > 0) {
+                      if (clearedLines >= 2) {
                           gameInstances.forEach(otherPlayer => {
                               if (otherPlayer !== currentGame && !otherPlayer.gameOver) {
-                                  otherPlayer.addObstacle(clearedLines);
+                                  const attackLines = clearedLines >= 4 ? 3 : 1;
+                                  otherPlayer.addObstacle(attackLines);
                               }
                           });
                       }
@@ -586,9 +587,12 @@
             const handleHardDrop = (player) => {
                 if (!player) return;
                 const clearedLines = player.hardDrop();
-                if (clearedLines > 0) {
+                if (clearedLines >= 2) {
                     gameInstances.forEach(p => {
-                        if (p !== player && !p.gameOver) p.addObstacle(clearedLines);
+                        if (p !== player && !p.gameOver) {
+                            const attackLines = clearedLines >= 4 ? 3 : 1;
+                            p.addObstacle(attackLines);
+                        }
                     });
                 }
             };
@@ -598,8 +602,9 @@
                 if (event.code === 'ArrowLeft') p1.move(-1);
                 else if (event.code === 'ArrowRight') p1.move(1);
                 else if (event.code === 'ArrowDown') p1.drop();
-                else if (event.code === 'KeyZ' || event.code === 'KeyX') p1.rotate();
+                else if (event.code === 'KeyZ') p1.rotate();
                 else if (event.code === 'ArrowUp') handleHardDrop(p1);
+                else if (event.code === 'KeyX') p1.flip();
             }
 
             const p2 = humanPlayers.find(g => g.playerId === 2);
@@ -607,8 +612,9 @@
                 if (event.code === 'KeyA') p2.move(-1);
                 else if (event.code === 'KeyD') p2.move(1);
                 else if (event.code === 'KeyS') p2.drop();
-                else if (event.code === 'KeyE') p2.rotate();
+                else if (event.code === 'KeyQ') p2.rotate();
                 else if (event.code === 'KeyW') handleHardDrop(p2);
+                else if (event.code === 'KeyE') p2.flip();
             }
             
             const p3 = humanPlayers.find(g => g.playerId === 3);
@@ -616,8 +622,9 @@
                 if (event.code === 'KeyJ') p3.move(-1);
                 else if (event.code === 'KeyL') p3.move(1);
                 else if (event.code === 'KeyK') p3.drop();
-                else if (event.code === 'KeyO') p3.rotate();
+                else if (event.code === 'KeyP') p3.rotate();
                 else if (event.code === 'KeyI') handleHardDrop(p3);
+                else if (event.code === 'KeyO') p3.flip();
             }
         });
     });

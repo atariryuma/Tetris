@@ -4,6 +4,11 @@ const boardWidth = 10;
 const boardHeight = 20;
 const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
 
+// ブロックカラー定義
+const COLORS = {
+    OBSTACLE: '#808080'
+};
+
 // 汎用コントローラー用ボタンマッピングシステム
 class UniversalGamepadMapper {
     constructor() {
@@ -478,6 +483,16 @@ class Tetris {
         }
     }
 
+    flip() {
+        if (this.gameOver || !this.currentShape) return;
+
+        const flippedShape = this.currentShape.shape.map(row => row.slice().reverse());
+        if (this.isValidMove(flippedShape, this.currentPosition.x, this.currentPosition.y)) {
+            this.currentShape.shape = flippedShape;
+            this.updateGhostPosition();
+        }
+    }
+
     hardDrop() {
         let clearedLines = 0;
         while (this.canMove(0, 1)) {
@@ -651,11 +666,11 @@ class Tetris {
     }
 
     addObstacle(lines) {
-        if (lines <= 0) return;
+        if (this.gameOver || lines <= 0) return;
         
         // アニメーション付きでお邪魔ブロックを追加
         for (let i = 0; i < lines; i++) {
-            const obstacleRow = Array(boardWidth).fill('#808080');
+            const obstacleRow = Array(boardWidth).fill(COLORS.OBSTACLE);
             obstacleRow[Math.floor(Math.random() * boardWidth)] = 0; // ランダムな位置に穴を開ける
             
             // アニメーション情報を追加
@@ -670,6 +685,11 @@ class Tetris {
         // ボードから上の行を削除
         for (let i = 0; i < lines; i++) {
             this.board.splice(0, 1);
+        }
+
+        // 現在のピースが衝突する場合はゲームオーバー
+        if (this.currentShape && !this.isValidMove(this.currentShape.shape, this.currentPosition.x, this.currentPosition.y)) {
+            this.gameOver = true;
         }
     }
     
