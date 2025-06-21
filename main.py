@@ -2,7 +2,6 @@
 Main entry point for the Tetris game.
 """
 
-import pygame
 import sys
 import os
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT, VSYNC
