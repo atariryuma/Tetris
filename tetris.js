@@ -67,7 +67,8 @@ class Tetris {
         
         // Gamepad設定
         this.gamepadIndex = null;
-        this.assignGamepad();
+        this.gamepadAssigned = false;
+        this.gamepadButtonStates = {};
         
         // Animation設定
         this.animatingObstacles = [];
@@ -75,26 +76,47 @@ class Tetris {
     }
 
     assignGamepad() {
+        if (this.gamepadAssigned) return;
+        
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        console.log(`Player ${this.playerId}: Checking for gamepads...`, gamepads.length);
+        
         for (let i = 0; i < gamepads.length; i++) {
             if (gamepads[i] && !this.isGamepadAssigned(i)) {
                 this.gamepadIndex = i;
+                this.gamepadAssigned = true;
+                console.log(`Player ${this.playerId}: Assigned gamepad ${i} - ${gamepads[i].id}`);
                 break;
             }
+        }
+        
+        if (!this.gamepadAssigned) {
+            console.log(`Player ${this.playerId}: No available gamepad found`);
         }
     }
     
     isGamepadAssigned(index) {
-        // この関数は他のプレイヤーがそのゲームパッドを使用しているかチェック
-        // 簡略化のため、常にfalseを返す（実際の実装では全プレイヤーをチェック）
+        // グローバルなゲームパッド管理（簡易版）
+        if (window.assignedGamepads && window.assignedGamepads[index]) {
+            return window.assignedGamepads[index] !== this.playerId;
+        }
         return false;
     }
     
     hasGamepadInput() {
-        if (this.gamepadIndex === null) return false;
+        if (!this.gamepadAssigned || this.gamepadIndex === null) {
+            this.assignGamepad(); // 再試行
+            return false;
+        }
+        
         const gamepads = navigator.getGamepads();
         const gamepad = gamepads[this.gamepadIndex];
-        if (!gamepad) return false;
+        if (!gamepad) {
+            console.log(`Player ${this.playerId}: Gamepad ${this.gamepadIndex} disconnected`);
+            this.gamepadAssigned = false;
+            this.gamepadIndex = null;
+            return false;
+        }
         
         return gamepad.buttons.some(button => button.pressed) || 
                Math.abs(gamepad.axes[0]) > 0.1 || Math.abs(gamepad.axes[1]) > 0.1;
@@ -106,6 +128,18 @@ class Tetris {
         this.updateGhostPosition();
         this.lastDropTime = performance.now();
         this.lastCPUMoveTime = performance.now();
+        
+        // ゲームパッドの再割り当てを試行
+        this.assignGamepad();
+        
+        // グローバルゲームパッド管理を初期化
+        if (!window.assignedGamepads) {
+            window.assignedGamepads = {};
+        }
+        if (this.gamepadAssigned) {
+            window.assignedGamepads[this.gamepadIndex] = this.playerId;
+        }
+        
         this.draw();
         this.drawNext();
     }
@@ -145,41 +179,74 @@ class Tetris {
     }
     
     handleGamepadInput(time) {
+        if (!this.gamepadAssigned || this.gamepadIndex === null) return;
+        
         const gamepads = navigator.getGamepads();
         const gamepad = gamepads[this.gamepadIndex];
-        if (!gamepad) return;
+        if (!gamepad) {
+            this.gamepadAssigned = false;
+            this.gamepadIndex = null;
+            return;
+        }
         
         const inputInterval = INPUT_INTERVAL;
         
-        // D-pad left (button 14)
-        if (gamepad.buttons[14] && gamepad.buttons[14].pressed && time - this.lastInputTime.left > inputInterval) {
-            this.move(-1);
-            this.lastInputTime.left = time;
+        // デバッグ: ボタンの状態をログ出力（最初の数秒間のみ）
+        if (Math.random() < 0.01) { // 1%の確率でログ出力
+            console.log(`Player ${this.playerId} gamepad buttons:`, 
+                gamepad.buttons.map((btn, i) => btn.pressed ? i : null).filter(x => x !== null));
         }
         
-        // D-pad right (button 15)
-        if (gamepad.buttons[15] && gamepad.buttons[15].pressed && time - this.lastInputTime.right > inputInterval) {
-            this.move(1);
-            this.lastInputTime.right = time;
+        // ボタンの押下状態を管理（連続入力を防ぐ）
+        const checkButton = (buttonIndex, action, inputType) => {
+            const button = gamepad.buttons[buttonIndex];
+            if (!button) return false;
+            
+            const wasPressed = this.gamepadButtonStates[buttonIndex] || false;
+            const isPressed = button.pressed;
+            this.gamepadButtonStates[buttonIndex] = isPressed;
+            
+            // ボタンが新しく押された場合のみ実行
+            if (isPressed && !wasPressed && time - this.lastInputTime[inputType] > inputInterval) {
+                action();
+                this.lastInputTime[inputType] = time;
+                return true;
+            }
+            return false;
+        };
+        
+        // 左右のアナログスティック対応
+        const leftStickX = gamepad.axes[0];
+        const leftStickY = gamepad.axes[1];
+        
+        // アナログスティック左右
+        if (Math.abs(leftStickX) > 0.5 && time - this.lastInputTime.left > inputInterval && time - this.lastInputTime.right > inputInterval) {
+            if (leftStickX < -0.5) {
+                this.move(-1);
+                this.lastInputTime.left = time;
+            } else if (leftStickX > 0.5) {
+                this.move(1);
+                this.lastInputTime.right = time;
+            }
         }
         
-        // D-pad down (button 13)
-        if (gamepad.buttons[13] && gamepad.buttons[13].pressed && time - this.lastInputTime.down > inputInterval) {
+        // アナログスティック下
+        if (leftStickY > 0.5 && time - this.lastInputTime.down > inputInterval) {
             this.drop();
             this.lastInputTime.down = time;
         }
         
-        // A button (button 0) - rotate
-        if (gamepad.buttons[0] && gamepad.buttons[0].pressed && time - this.lastInputTime.rotate > inputInterval) {
-            this.rotate();
-            this.lastInputTime.rotate = time;
-        }
+        // D-pad対応（複数のボタン番号を試行）
+        checkButton(14, () => this.move(-1), 'left') || // D-pad left
+        checkButton(15, () => this.move(1), 'right') ||  // D-pad right
+        checkButton(13, () => this.drop(), 'down') ||    // D-pad down
+        checkButton(12, () => this.hardDrop(), 'hardDrop'); // D-pad up
         
-        // D-pad up (button 12) - hard drop
-        if (gamepad.buttons[12] && gamepad.buttons[12].pressed && time - this.lastInputTime.hardDrop > inputInterval) {
-            this.hardDrop();
-            this.lastInputTime.hardDrop = time;
-        }
+        // 回転ボタン（複数のボタンを試行）
+        checkButton(0, () => this.rotate(), 'rotate') ||  // A button
+        checkButton(1, () => this.rotate(), 'rotate') ||  // B button
+        checkButton(2, () => this.rotate(), 'rotate') ||  // X button
+        checkButton(3, () => this.rotate(), 'rotate');    // Y button
     }
 
     makeCPUMove() {

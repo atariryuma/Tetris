@@ -299,6 +299,36 @@
     document.addEventListener('DOMContentLoaded', () => {
         const startButton = document.getElementById('startButton');
         
+        // Gamepad detection
+        let gamepadDetectionInterval;
+        
+        function detectGamepads() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            const connectedGamepads = Array.from(gamepads).filter(gp => gp !== null);
+            
+            if (connectedGamepads.length > 0) {
+                console.log('Connected gamepads:', connectedGamepads.map(gp => gp.id));
+                console.log('Gamepad buttons available:', connectedGamepads[0].buttons.length);
+                console.log('Gamepad axes available:', connectedGamepads[0].axes.length);
+            } else {
+                console.log('No gamepads detected');
+            }
+        }
+        
+        // Gamepad connection events
+        window.addEventListener('gamepadconnected', (e) => {
+            console.log('Gamepad connected:', e.gamepad.id, 'at index', e.gamepad.index);
+            detectGamepads();
+        });
+        
+        window.addEventListener('gamepaddisconnected', (e) => {
+            console.log('Gamepad disconnected:', e.gamepad.id, 'at index', e.gamepad.index);
+        });
+        
+        // Start gamepad detection
+        gamepadDetectionInterval = setInterval(detectGamepads, 3000);
+        detectGamepads(); // Initial detection
+        
         if (typeof Tetris === 'undefined') {
             console.error("エラー: 'Tetris' クラスが見つかりません。tetris.jsを確認してください。");
             startButton.textContent = "読み込みエラー";
@@ -369,6 +399,9 @@
             });
 
             if(gameInstances.length > 0) {
+              // Stop gamepad detection during game
+              clearInterval(gamepadDetectionInterval);
+              
               function gameLoop(time) {
                   const activeGames = gameInstances.filter(game => !game.gameOver);
 
@@ -377,6 +410,8 @@
                       gameOverMsg.textContent = activeGames.length === 1 ? `PLAYER ${activeGames[0].playerId} WINS!` : 'DRAW!';
                       gameOverMsg.style.display = 'block';
                       cancelAnimationFrame(animationFrameId);
+                      // Restart gamepad detection
+                      gamepadDetectionInterval = setInterval(detectGamepads, 3000);
                       return;
                   }
                   
