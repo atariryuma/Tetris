@@ -1,104 +1,54 @@
+#!/usr/bin/env python
 """
-Windows-specific launcher for Tetris game with comprehensive error handling.
+Tetris Game Launcher for Windows (Improved)
 """
-
-import sys
-import os
 import subprocess
-import time
+import sys
+import shutil
 
-def check_python_version():
-    """Check if Python version is compatible."""
-    version = sys.version_info
-    if version.major < 3 or (version.major == 3 and version.minor < 8):
-        print(f"Warning: Python {version.major}.{version.minor} detected")
-        print("Recommended: Python 3.8 or higher")
-        return False
-    print(f"✓ Python {version.major}.{version.minor}.{version.micro}")
-    return True
 
-def check_dependencies():
-    """Check if required dependencies are installed."""
+def try_command(cmd, description):
+    """Execute a shell command, print description. Return True on success."""
+    print(description)
     try:
-        import pygame
-        print(f"✓ Pygame {pygame.version.ver}")
+        result = subprocess.run(cmd, check=True, shell=True)
         return True
-    except ImportError:
-        print("✗ Pygame not found")
-        print("Installing pygame...")
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "pygame", "numpy"])
-            print("✓ Dependencies installed")
-            return True
-        except subprocess.CalledProcessError:
-            print("✗ Failed to install dependencies")
-            return False
+    except subprocess.CalledProcessError:
+        return False
 
-def setup_windows_environment():
-    """Set up Windows-specific environment variables."""
-    # Prevent pygame from trying to use DirectX which can cause issues
-    os.environ['SDL_VIDEODRIVER'] = 'windib'
-    # Ensure audio works properly
-    os.environ['SDL_AUDIODRIVER'] = 'directsound'
-    print("✓ Windows environment configured")
-
-def run_game():
-    """Run the Tetris game with error handling."""
-    print("=== Tetris Game Launcher for Windows ===")
-    print()
-    
-    # Check Python version
-    if not check_python_version():
-        print("Consider upgrading Python for best compatibility")
-        input("Press Enter to continue anyway...")
-    
-    # Check dependencies
-    if not check_dependencies():
-        print("Cannot run game without dependencies")
-        input("Press Enter to exit...")
-        return False
-    
-    # Set up environment
-    setup_windows_environment()
-    
-    # Try to run the game
-    print("\nStarting Tetris game...")
-    print("If the game window doesn't appear, check the console for error messages.")
-    print()
-    
-    try:
-        # Import and run the game
-        from main import main
-        return main() == 0
-    except ImportError as e:
-        print(f"✗ Import error: {e}")
-        print("Make sure all game files are in the same directory")
-        return False
-    except Exception as e:
-        print(f"✗ Game error: {e}")
-        print("\nTroubleshooting:")
-        print("1. Try running as administrator")
-        print("2. Check Windows graphics drivers")
-        print("3. Disable antivirus temporarily")
-        print("4. Try running: python main.py")
-        return False
 
 def main():
-    """Main launcher function."""
-    success = run_game()
-    
-    if success:
-        print("\n🎉 Game finished successfully!")
-    else:
-        print("\n⚠️  Game encountered issues")
-        print("\nAlternative ways to run:")
-        print("1. Double-click main.py")
-        print("2. Run: python main.py")
-        print("3. Run: python safe_launcher.py")
-    
-    print("\nPress Enter to exit...")
-    input()
-    return 0 if success else 1
+    print("=== Tetris Game Launcher for Windows ===")
+    print("Starting game with the first available method...")
+
+    # Helper to check if an executable exists
+    def exists(exe):
+        return shutil.which(exe) is not None
+
+    # 1. Try batch launcher
+    if try_command("run_game.bat", "▶ run_game.bat を実行"):  # Windows-specific batch
+        sys.exit(0)
+
+    # 2. Try python interpreter
+    if exists("python"):
+        if try_command("python main.py", "▶ python main.py を実行"):  # Standard Python
+            sys.exit(0)
+
+    # 3. Try py launcher
+    if exists("py"):
+        if try_command("py main.py", "▶ py main.py を実行"):  # Python launcher
+            sys.exit(0)
+
+    # 4. (Optional) Try uv if installed
+    if exists("uv"):
+        if try_command("uv run python main.py", "▶ uv run python main.py を実行"):  # Development tool
+            sys.exit(0)
+
+    # All attempts failed
+    print("❌ すべての起動に失敗しました。依存関係が正しくインストールされているか確認してください。")
+    print("  pip install pygame")
+    sys.exit(1)
+
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

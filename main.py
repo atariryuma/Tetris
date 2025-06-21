@@ -4,62 +4,52 @@ Main entry point for the Tetris game.
 
 import sys
 import os
-
-try:
-    import pygame
-except ModuleNotFoundError:
-    print("Error: pygame is not installed.")
-    print("Please run 'pip install -r requirements.txt' to install dependencies.")
-    print("Alternatively, launch the game via 'run_game.sh' or 'run_game.bat'.")
-    sys.exit(1)
-
-from constants import *
+from constants import WINDOW_WIDTH, WINDOW_HEIGHT, VSYNC
 from game_manager import GameManager
 from font_manager import cleanup_fonts
+from utils import safe_events  # ← ここを変更
 
 def main():
     """Initialize and run the Tetris game."""
     print("=== 三人対戦テトリス NEO - Python Edition ===")
     print("Initializing game systems...")
-    
-    # Check if pygame is already initialized
+
+    # Initialize pygame if not already
     if not pygame.get_init():
         pygame.init()
-    
-    # Try to set up display
+
+    # Attempt to create display
     try:
         screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption("三人対戦テトリス NEO - Python Edition")
     except pygame.error as e:
-        print(f"Display initialization failed: {e}")
+        print(f"[ERROR] Display initialization failed: {e}")
         print("Falling back to headless mode...")
+        os.environ['SDL_VIDEODRIVER'] = 'dummy'
+        pygame.display.quit()
+        pygame.display.init()
         try:
-            os.environ['SDL_VIDEODRIVER'] = 'dummy'
-            pygame.display.quit()
-            pygame.display.init()
             screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-            print("Running in headless mode - no visual output")
+            print("[INFO] Running in headless mode - no visual output")
         except Exception as fallback_error:
-            print(f"Headless mode also failed: {fallback_error}")
-            print("Attempting minimal display setup...")
+            print(f"[ERROR] Headless mode also failed: {fallback_error}")
             screen = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
-    
-    # Set icon (if available)
+
+    # Load window icon if available
     try:
         icon_path = os.path.join(os.path.dirname(__file__), 'assets', 'images', 'icon.png')
         if os.path.exists(icon_path):
-            icon = pygame.image.load(icon_path)
-            pygame.display.set_icon(icon)
+            pygame.display.set_icon(pygame.image.load(icon_path))
     except Exception as e:
-        print(f"Could not load icon: {e}")
-    
-    # Enable VSync if supported
+        print(f"[WARN] Could not load icon: {e}")
+
+    # Enable VSync if requested
     if VSYNC:
         try:
             screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.DOUBLEBUF)
-        except Exception:
-            print("VSync not supported, continuing without it")
-    
+        except pygame.error:
+            print("[INFO] VSync not supported, continuing without it")
+
     print("Game systems initialized successfully!")
     print("\nControls:")
     print("- Arrow keys: Move pieces")
@@ -69,26 +59,34 @@ def main():
     print("- F1: Show volume info")
     print("- F2/F3: Adjust master volume")
     print("\nGamepad support:")
-    print("- Xbox, PlayStation, Nintendo Switch Pro controllers")
+    print("- Xbox, PlayStation, Nintendo Switch Pro")
     print("- Plug in controllers before or during play")
-    print("- Multiple controllers supported for multiplayer")
-    
+
+    # BGM安全読み込み
+    bgm_path = os.path.join(os.path.dirname(__file__), 'assets', 'sounds', 'menu_music.ogg')
+    if not os.path.exists(bgm_path):
+        print(f"[INFO] BGM not found, skipping: {os.path.basename(bgm_path)}")
+    else:
+        try:
+            pygame.mixer.music.load(bgm_path)
+            pygame.mixer.music.play(-1)
+        except Exception as e:
+            print(f"[WARN] BGM play failed: {e}")
+
     try:
-        # Create and run game manager
-        game_manager = GameManager(screen)
-        game_manager.run()
-        
+        # ゲーム開始
+        gm = GameManager(screen, event_source=safe_events)
+        gm.run()
     except KeyboardInterrupt:
         print("\nGame interrupted by user")
     except Exception as e:
         print(f"\nUnexpected error: {e}")
-        import traceback
-        traceback.print_exc()
+        import traceback; traceback.print_exc()
     finally:
         cleanup_fonts()
         pygame.quit()
         print("Game shutdown complete")
-        
+
     return 0
 
 if __name__ == "__main__":
