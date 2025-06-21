@@ -10,10 +10,6 @@ const boardWidth = 10;
 const boardHeight = 20;
 const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
 
-// 特殊ブロックの種類と出現確率
-const specialBlockTypes = ['bomb', 'shield'];
-const SPECIAL_BLOCK_CHANCE = 0.1; // 10% の確率で特殊ブロックを生成
-
 const keyBindings = [
     { left: 'ArrowLeft', right: 'ArrowRight', down: 'ArrowDown', rotate: 'z', hardDrop: 'ArrowUp', flip: 'x' },
     { left: 'a', right: 'd', down: 's', rotate: 'w', hardDrop: 'q', flip: 'e' },
@@ -34,12 +30,7 @@ const shapes = [
 
 function getRandomShape() {
     const randomIndex = Math.floor(Math.random() * shapes.length);
-    const shape = deepCopyShape(shapes[randomIndex]);
-    if (Math.random() < SPECIAL_BLOCK_CHANCE) {
-        const typeIndex = Math.floor(Math.random() * specialBlockTypes.length);
-        shape.type = specialBlockTypes[typeIndex];
-    }
-    return shape;
+    return deepCopyShape(shapes[randomIndex]);
 }
 
 function deepCopyShape(shape) {
@@ -250,32 +241,24 @@ function handleKeyboardInput(event) {
     });
 }
 
-function drawBlock(ctx, x, y, color, type = null) {
+function drawBlock(ctx, x, y, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
     ctx.strokeStyle = '#000';
     ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
-    if (type) {
-        ctx.strokeStyle = 'gold';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x * blockSize + 4, y * blockSize + 4, blockSize - 8, blockSize - 8);
-        ctx.lineWidth = 1;
-    }
 }
 
 function draw(player) {
     const ctx = player.ctx;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     player.board.forEach((row, y) => {
-        row.forEach((cell, x) => {
-            if (cell) {
-                const color = cell.color || cell;
-                const type = cell.type || null;
-                drawBlock(ctx, x, y, color, type);
+        row.forEach((color, x) => {
+            if (color) {
+                drawBlock(ctx, x, y, color);
             }
         });
     });
-    drawShape(ctx, player.currentShape.shape, player.currentPosition.x, player.currentPosition.y, player.currentShape.color, player.currentShape.type);
+    drawShape(ctx, player.currentShape.shape, player.currentPosition.x, player.currentPosition.y, player.currentShape.color);
     drawGhostShape(ctx, player.currentShape.shape, player.ghostPosition.x, player.ghostPosition.y, player.currentShape.color);
     drawScore(player);  // スコアを描画
 }
@@ -289,11 +272,11 @@ function drawScore(player) {
     ctx.fillText(`${player.name} Score: ${player.score}`, 10, 10);
 }
 
-function drawShape(ctx, shape, x, y, color, type = null) {
+function drawShape(ctx, shape, x, y, color) {
     shape.forEach((row, dy) => {
         row.forEach((cell, dx) => {
             if (cell) {
-                drawBlock(ctx, x + dx, y + dy, color, type);
+                drawBlock(ctx, x + dx, y + dy, color);
             }
         });
     });
@@ -301,7 +284,7 @@ function drawShape(ctx, shape, x, y, color, type = null) {
 
 function drawGhostShape(ctx, shape, x, y, color) {
     ctx.globalAlpha = 0.5;
-    drawShape(ctx, shape, x, y, color, null);
+    drawShape(ctx, shape, x, y, color);
     ctx.globalAlpha = 1;
 }
 
@@ -319,7 +302,6 @@ function Player(name, ctx, color, gamepadIndex) {
     this.gamepadIndex = gamepadIndex;
     this.ghostPosition = { x: 0, y: 0 };
     this.score = 0;
-    this.shielded = false;
 
     // 追加: コントローラー入力の最後の時間を管理するオブジェクト
     this.lastInputTime = {
@@ -418,14 +400,10 @@ function Player(name, ctx, color, gamepadIndex) {
         while (moveDown(this)) {
             // ピースを可能な限り下へ移動
         }
-        const clearedLines = placeShape(this);  // 最終位置にピースを固定し、消去ライン数を取得
+        placeShape(this);  // 最終位置にピースを固定
+        const clearedLines = clearLines(this);  // ラインを消去
         addObstacleBlocks(this, clearedLines);  // 相手プレイヤーに邪魔ブロックを追加
-        if (resetPlayer(this)) {
-            if (checkGameOver()) {
-                endGame();
-                return;
-            }
-        }
+        this.setNextShape();  // 修正: 次のブロックに切り替える
     };
 
     // 追加: 次のブロックに切り替えるメソッド    
@@ -465,8 +443,7 @@ function rotate(matrix) {
 }
 
 function flip(matrix) {
-    // Create new rows so the original matrix remains unmodified
-    return matrix.map(row => row.slice().reverse());
+    return matrix.map(row => row.reverse());
 }
 
 function isValidMove(shape, x, y, player) {
@@ -492,10 +469,7 @@ function placeShape(player) {
     player.currentShape.shape.forEach((row, dy) => {
         row.forEach((cell, dx) => {
             if (cell) {
-                player.board[player.currentPosition.y + dy][player.currentPosition.x + dx] = {
-                    color: player.currentShape.color,
-                    type: player.currentShape.type || null
-                };
+                player.board[player.currentPosition.y + dy][player.currentPosition.x + dx] = player.currentShape.color;
                 if (player.currentShape.type) {
                     specialBlocks.push({ x: player.currentPosition.x + dx, y: player.currentPosition.y + dy, type: player.currentShape.type });
                 }
@@ -529,28 +503,29 @@ function calculateScore(clearedLines) {
 function addObstacleBlocks(player, clearedLines) {
     if (clearedLines === 0) return;
 
-    // 対象となるプレイヤーを抽出（自分以外のアクティブなプレイヤー）
-    const targets = players.filter((p, idx) => p !== player && activePlayers[idx] && !p.shielded);
-    if (targets.length === 0) return;
+    const playerRanks = players.filter((_, index) => activePlayers[index]).sort((a, b) => b.score - a.score);
+    const currentPlayerRank = playerRanks.findIndex(p => p === player);
 
-    const linesPerTarget = Math.floor(clearedLines / targets.length);
-    let remainder = clearedLines % targets.length;
-
-    targets.forEach(target => {
-        let linesToAdd = linesPerTarget;
-        if (remainder > 0) {
-            linesToAdd += 1;
-            remainder -= 1;
+    if (currentPlayerRank === 0) {
+        // 自分が1位の場合、2位のプレイヤーに邪魔ブロックを送る
+        const numPlayers = playerRanks.length;
+        const blocksPerPlayer = Math.floor(clearedLines / (numPlayers - 1));
+        if (numPlayers > 2) {
+            for (let i = 1; i < numPlayers - 1; i++) {
+                for (let j = 0; j < blocksPerPlayer; j++) {
+                    playerRanks[i].board.splice(0, 1);
+                    playerRanks[i].board.push(Array(boardWidth).fill(0).map((_, index) => index === Math.floor(boardWidth / 2) ? 0 : '#808080'));
+                }
+            }
         }
-        for (let i = 0; i < linesToAdd; i++) {
-            target.board.splice(0, 1);
-            target.board.push(
-                Array(boardWidth)
-                    .fill(0)
-                    .map((_, index) => (index === Math.floor(boardWidth / 2) ? 0 : '#808080'))
-            );
+    } else if (currentPlayerRank === 1) {
+        // 自分が2位の場合、1位のプレイヤーに邪魔ブロックを送る
+        const topPlayer = playerRanks[0];
+        for (let i = 0; i < clearedLines; i++) {
+            topPlayer.board.splice(0, 1);
+            topPlayer.board.push(Array(boardWidth).fill(0).map((_, index) => index === Math.floor(boardWidth / 2) ? 0 : '#808080'));
         }
-    });
+    }
 }
 
 // 特殊ブロックの効果を適用する関数
@@ -663,5 +638,64 @@ function showEffect(ctx, x, y, text) {
     ctx.fillText(text, x * blockSize + blockSize / 2, y * blockSize + blockSize / 2);
     ctx.restore();
 }
+
+  // --- CPUロジック ---
+  runAI() {
+    let bestMove = { score: -Infinity, x: 0, rotation: 0 };
+    for (let r = 0; r < 4; r++) {
+      let tempPiece = { ...this.piece, shape: this.getRotatedShape(this.piece.shape, r) };
+      for (let x = -2; x < COLS; x++) {
+        let tempBoard = JSON.parse(JSON.stringify(this.board));
+        let y = 0;
+        if (this.checkCollisionOnBoard(tempBoard, tempPiece.shape, x, y)) continue;
+        while (!this.checkCollisionOnBoard(tempBoard, tempPiece.shape, x, y + 1)) y++;
+        tempPiece.shape.forEach((row, dy) => row.forEach((val, dx) => {
+            if(val !== 0 && tempBoard[y+dy]) tempBoard[y+dy][x+dx] = 1;
+        }));
+        const score = this.evaluateBoard(tempBoard);
+        if (score > bestMove.score) bestMove = { score, x, rotation: r };
+      }
+    }
+    this.piece.shape = this.getRotatedShape(this.piece.shape, bestMove.rotation);
+    this.piece.x = bestMove.x;
+    return this.hardDrop();
+  }
+
+  evaluateBoard(board) {
+    let height = 0, holes = 0, completedLines = 0;
+    for (let y = 0; y < ROWS; y++) {
+      let isLineComplete = true;
+      for (let x = 0; x < COLS; x++) {
+        if (board[y][x] === 0) {
+          isLineComplete = false;
+          if (y > 0 && board[y-1] && board[y-1][x] !== 0) holes++;
+        }
+      }
+      if (isLineComplete) completedLines++;
+    }
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (board[y][x] !== 0) { height = ROWS - y; break; }
+      }
+      if (height > 0) break;
+    }
+    return (completedLines * 10) - (height * 0.5) - (holes * 1);
+  }
+  
+  getRotatedShape(shape, rotations) {
+    let tempShape = shape;
+    for (let i = 0; i < rotations; i++) tempShape = tempShape[0].map((_, col) => tempShape.map(row => row[col]).reverse());
+    return tempShape;
+  }
+  
+  checkCollisionOnBoard(board, shape, x, y) {
+      for (let r = 0; r < shape.length; r++) for (let c = 0; c < shape[r].length; c++) {
+        if(shape[r][c] !== 0) {
+            let nX = x + c, nY = y + r;
+            if(nX < 0 || nX >= COLS || nY >= ROWS || (board[nY] && board[nY][nX] !== 0)) return true;
+        }
+      }
+      return false;
+  }
 
 gameLoop();
