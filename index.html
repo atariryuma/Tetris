@@ -6,7 +6,7 @@
   <title>三人対戦テトリス NEO</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg-color: #1a1a2e;
@@ -18,9 +18,9 @@
     }
 
     body {
-      background-color: var(--bg-color);
+      background: linear-gradient(135deg, var(--bg-color) 0%, #16213e 50%, var(--bg-color) 100%);
       color: var(--font-color);
-      font-family: 'Press Start 2P', cursive;
+      font-family: 'Orbitron', 'Press Start 2P', monospace;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -29,13 +29,16 @@
       margin: 0;
       padding: 20px;
       text-align: center;
+      overflow-x: auto;
     }
 
     h1 {
-      font-size: 3rem;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 2.5rem;
       color: var(--primary-color);
-      text-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color);
-      margin-bottom: 20px;
+      text-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color), 0 0 30px var(--primary-color);
+      margin-bottom: 30px;
+      letter-spacing: 2px;
     }
 
     #start-container {
@@ -43,23 +46,26 @@
     }
 
     .retro-button {
-      font-family: 'Press Start 2P', cursive;
-      background-color: var(--primary-color);
+      font-family: 'Orbitron', monospace;
+      background: linear-gradient(45deg, var(--primary-color), #ff6b7d);
       color: var(--font-color);
-      border: none;
+      border: 2px solid var(--glow-color);
       padding: 15px 30px;
-      font-size: 1.2rem;
+      font-size: 1rem;
+      font-weight: 700;
       cursor: pointer;
       text-transform: uppercase;
       transition: all 0.3s ease;
-      box-shadow: 0 5px 0 #b32a3e, 0 8px 15px rgba(0,0,0,0.4);
+      box-shadow: 0 5px 0 #b32a3e, 0 8px 15px rgba(0,0,0,0.4), 0 0 0 var(--glow-color);
       border-radius: 8px;
+      letter-spacing: 1px;
     }
 
     .retro-button:hover:not(:disabled) {
-      background-color: #ff6384;
+      background: linear-gradient(45deg, #ff6b7d, var(--glow-color));
       transform: translateY(-2px);
-      box-shadow: 0 7px 0 #b32a3e, 0 10px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 7px 0 #b32a3e, 0 10px 20px rgba(0,0,0,0.5), 0 0 20px var(--glow-color);
+      text-shadow: 0 0 10px rgba(255,255,255,0.8);
     }
 
     .retro-button:active:not(:disabled) {
@@ -178,16 +184,20 @@
     }
 
     .player-mode-button {
-        font-family: 'Press Start 2P', cursive;
+        font-family: 'Orbitron', monospace;
+        font-weight: 600;
         background-color: #4CAF50;
         color: white;
-        padding: 10px 15px;
-        border: none;
+        padding: 12px 20px;
+        border: 2px solid transparent;
         cursor: pointer;
-        width: 150px;
+        width: 160px;
         text-align: center;
-        border-radius: 5px;
-        transition: background-color 0.3s;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
     .player-mode-button[data-mode="CPU"] { background-color: #fca311; }
     .player-mode-button[data-mode="OFF"] { background-color: #6c757d; }
@@ -207,12 +217,287 @@
         border-radius: 10px;
     }
 
+    .pause-menu {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pause-content {
+        background: var(--secondary-color);
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        min-width: 300px;
+    }
+
+    .pause-content h2 {
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+    }
+
+    .pause-content .retro-button {
+        display: block;
+        margin: 10px auto;
+        width: 200px;
+    }
+
+    .controller-guide {
+        background: rgba(15, 52, 96, 0.9);
+        border: 2px solid var(--border-color);
+        border-radius: 15px;
+        padding: 25px;
+        margin: 20px 0;
+        max-width: 1200px;
+        width: 100%;
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+
+    .controller-guide h2 {
+        font-family: 'Press Start 2P', monospace;
+        color: var(--glow-color);
+        text-align: center;
+        margin-bottom: 25px;
+        font-size: 1.5rem;
+        text-shadow: 0 0 10px var(--glow-color);
+    }
+
+    .controller-layouts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+
+    .controller-section {
+        background: rgba(26, 26, 46, 0.8);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 20px;
+    }
+
+    .controller-section h3 {
+        font-family: 'Orbitron', monospace;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+        text-align: center;
+    }
+
+    .controls-grid {
+        display: grid;
+        gap: 8px;
+    }
+
+    .control-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+
+    .button-icon {
+        font-family: 'Orbitron', monospace;
+        font-weight: 600;
+        color: var(--glow-color);
+        min-width: 120px;
+        text-align: left;
+    }
+
+    .control-desc {
+        color: #ccc;
+        text-align: right;
+        flex: 1;
+    }
+
+    .controller-tips {
+        background: rgba(0,0,0,0.4);
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+    }
+
+    .controller-tips h3 {
+        font-family: 'Orbitron', monospace;
+        color: var(--glow-color);
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+    }
+
+    .controller-tips ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .controller-tips li {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .controller-tips li:last-child {
+        border-bottom: none;
+    }
+
+    @media (max-width: 768px) {
+        .controller-guide {
+            padding: 15px;
+            margin: 10px;
+        }
+        
+        .controller-layouts {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .control-item {
+            flex-direction: column;
+            text-align: center;
+            gap: 5px;
+        }
+        
+        .button-icon, .control-desc {
+            text-align: center;
+            min-width: auto;
+        }
+    }
+
 
   </style>
 </head>
 <body>
 
   <h1>三人対戦テトリス NEO</h1>
+
+  <!-- Controller Guide Toggle -->
+  <div class="guide-toggle">
+    <button id="toggleGuide" class="retro-button">🎮 コントローラーガイドを表示</button>
+  </div>
+
+  <!-- Controller Instructions -->
+  <div id="controller-instructions" class="controller-guide" style="display: none;">
+    <h2>🎮 コントローラー操作ガイド</h2>
+    <div class="controller-layouts">
+      
+      <!-- Xbox Controller -->
+      <div class="controller-section">
+        <h3>🎯 Xbox / Xbox One / Xbox Series</h3>
+        <div class="controls-grid">
+          <div class="control-item">
+            <span class="button-icon xbox-dpad">十字キー ↕️↔️</span>
+            <span class="control-desc">メニュー移動 / ブロック移動</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon xbox-lstick">左スティック 🕹️</span>
+            <span class="control-desc">メニュー移動 / ブロック移動</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon xbox-a">Aボタン 🅰️</span>
+            <span class="control-desc">決定 / ブロック回転</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon xbox-b">Bボタン 🅱️</span>
+            <span class="control-desc">戻る / 一時停止</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon xbox-start">STARTボタン ⏸️</span>
+            <span class="control-desc">ゲーム開始 / 一時停止</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon xbox-lb">LBボタン 🔄</span>
+            <span class="control-desc">ハードドロップ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PlayStation Controller -->
+      <div class="controller-section">
+        <h3>🎯 PlayStation DualShock / DualSense</h3>
+        <div class="controls-grid">
+          <div class="control-item">
+            <span class="button-icon ps-dpad">十字キー ↕️↔️</span>
+            <span class="control-desc">メニュー移動 / ブロック移動</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon ps-lstick">左スティック 🕹️</span>
+            <span class="control-desc">メニュー移動 / ブロック移動</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon ps-x">✕ボタン</span>
+            <span class="control-desc">決定 / ブロック回転</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon ps-circle">○ボタン</span>
+            <span class="control-desc">戻る / 一時停止</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon ps-options">OPTIONSボタン ⏸️</span>
+            <span class="control-desc">ゲーム開始 / 一時停止</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon ps-l1">L1ボタン 🔄</span>
+            <span class="control-desc">ハードドロップ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nintendo Switch -->
+      <div class="controller-section">
+        <h3>🎯 Nintendo Switch Pro Controller</h3>
+        <div class="controls-grid">
+          <div class="control-item">
+            <span class="button-icon switch-dpad">十字ボタン ↕️↔️</span>
+            <span class="control-desc">メニュー移動 / ブロック移動</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon switch-lstick">左スティック 🕹️</span>
+            <span class="control-desc">メニュー移動 / ブロック移動</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon switch-a">Aボタン</span>
+            <span class="control-desc">決定 / ブロック回転</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon switch-b">Bボタン</span>
+            <span class="control-desc">戻る / 一時停止</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon switch-plus">+ボタン ⏸️</span>
+            <span class="control-desc">ゲーム開始 / 一時停止</span>
+          </div>
+          <div class="control-item">
+            <span class="button-icon switch-l">Lボタン 🔄</span>
+            <span class="control-desc">ハードドロップ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="controller-tips">
+      <h3>💡 操作のコツ</h3>
+      <ul>
+        <li>🔌 コントローラーを接続してから任意のボタンを押すと自動認識されます</li>
+        <li>🎮 複数のコントローラーが自動的に各プレイヤーに割り当てられます</li>
+        <li>⏸️ ゲーム中はSTARTボタンまたはBボタンで一時停止できます</li>
+        <li>🔄 十字キーとアナログスティックの両方で操作可能です</li>
+        <li>🎯 キーボード操作とコントローラー操作を混在できます</li>
+      </ul>
+    </div>
+  </div>
 
   <div id="player-setup">
     <div class="player-select-card">
@@ -293,6 +578,16 @@
   </div>
   
   <div id="gameOverMessage" class="game-over-message">GAME OVER</div>
+  
+  <!-- Pause Menu -->
+  <div id="pauseMenu" class="pause-menu" style="display: none;">
+    <div class="pause-content">
+      <h2>一時停止</h2>
+      <button id="resumeButton" class="retro-button">再開</button>
+      <button id="restartButton" class="retro-button">リスタート</button>
+      <button id="quitButton" class="retro-button">終了</button>
+    </div>
+  </div>
 
   <script src="tetris.js"></script>
   
@@ -301,14 +596,55 @@
         const startButton = document.getElementById('startButton');
         
         // Initialize GamepadManager and force immediate detection
+        console.log('=== Initializing Gamepad System ===');
+        console.log('Browser:', navigator.userAgent);
+        console.log('Gamepad API supported:', !!navigator.getGamepads);
+        
         gamepadManager.startMonitoring();
+        console.log('GamepadManager monitoring started');
+        
         gamepadManager.forceRefreshGamepads();
+        console.log('Initial gamepad refresh completed');
         
+        // Setup UI navigation for start screen
+        const playerButtons = [
+            document.getElementById('toggleGuide'),
+            document.getElementById('togglePlayer1'),
+            document.getElementById('togglePlayer2'),
+            document.getElementById('togglePlayer3'),
+            document.getElementById('startButton')
+        ];
         
-        // Force gamepad refresh periodically
+        uiNavigation.setFocusableElements(playerButtons);
+        uiNavigation.enable();
+        
+        // Force gamepad refresh periodically and handle UI navigation
         setInterval(() => {
             gamepadManager.forceRefreshGamepads();
-        }, 500);
+            uiNavigation.handleGamepadInput();
+            handleGlobalGamepadInput();
+        }, 100); // More frequent for responsive UI
+        
+        // Pause menu button event listeners
+        document.getElementById('resumeButton').addEventListener('click', resumeGame);
+        document.getElementById('restartButton').addEventListener('click', restartGame);
+        document.getElementById('quitButton').addEventListener('click', restartGame);
+        
+        // Controller guide toggle
+        const toggleGuideBtn = document.getElementById('toggleGuide');
+        const controllerInstructions = document.getElementById('controller-instructions');
+        let guideVisible = false;
+        
+        toggleGuideBtn.addEventListener('click', () => {
+            guideVisible = !guideVisible;
+            if (guideVisible) {
+                controllerInstructions.style.display = 'block';
+                toggleGuideBtn.textContent = '🎮 コントローラーガイドを非表示';
+            } else {
+                controllerInstructions.style.display = 'none';
+                toggleGuideBtn.textContent = '🎮 コントローラーガイドを表示';
+            }
+        });
         
         
         // Gamepad connection events
@@ -330,11 +666,6 @@
         }
 
         const playerModes = ['ON', 'CPU', 'OFF'];
-        const playerButtons = [
-            document.getElementById('togglePlayer1'),
-            document.getElementById('togglePlayer2'),
-            document.getElementById('togglePlayer3')
-        ];
         
         playerButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -349,8 +680,11 @@
 
         const setupDiv = document.getElementById('player-setup');
         const gameContainer = document.getElementById('game-container');
+        const pauseMenu = document.getElementById('pauseMenu');
         let gameInstances = [];
         let animationFrameId;
+        let isPaused = false;
+        let gameState = 'menu'; // 'menu', 'playing', 'paused', 'gameover'
 
         function requestFullScreen() {
             const elem = document.documentElement;
@@ -365,11 +699,130 @@
             }
         }
 
+        function pauseGame() {
+            if (gameState !== 'playing') return;
+            
+            isPaused = true;
+            gameState = 'paused';
+            pauseMenu.style.display = 'flex';
+            
+            // Setup pause menu navigation
+            const pauseButtons = [
+                document.getElementById('resumeButton'),
+                document.getElementById('restartButton'),
+                document.getElementById('quitButton')
+            ];
+            uiNavigation.setFocusableElements(pauseButtons);
+            
+            console.log('Game paused');
+        }
+
+        function resumeGame() {
+            if (gameState !== 'paused') return;
+            
+            isPaused = false;
+            gameState = 'playing';
+            pauseMenu.style.display = 'none';
+            uiNavigation.disable();
+            
+            // Resume game loop
+            if (gameInstances.length > 0) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+            
+            console.log('Game resumed');
+        }
+
+        function restartGame() {
+            // Stop current game
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            
+            // Clean up gamepad assignments
+            gameInstances.forEach(game => {
+                gamepadManager.unassignPlayer(game.playerId);
+            });
+            
+            // Reset UI
+            pauseMenu.style.display = 'none';
+            gameContainer.style.display = 'none';
+            setupDiv.style.display = 'flex';
+            startButton.parentElement.style.display = 'block';
+            document.getElementById('gameOverMessage').style.display = 'none';
+            
+            // Reset state
+            gameInstances = [];
+            isPaused = false;
+            gameState = 'menu';
+            
+            // Setup menu navigation
+            const menuButtons = [
+                document.getElementById('toggleGuide'),
+                document.getElementById('togglePlayer1'),
+                document.getElementById('togglePlayer2'),
+                document.getElementById('togglePlayer3'),
+                document.getElementById('startButton')
+            ];
+            uiNavigation.setFocusableElements(menuButtons);
+            uiNavigation.enable();
+            
+            console.log('Game restarted');
+        }
+
+        // Global gamepad input handler for pause/menu functions
+        function handleGlobalGamepadInput() {
+            const gamepads = navigator.getGamepads();
+            for (let i = 0; i < gamepads.length; i++) {
+                if (gamepads[i]) {
+                    const gamepad = gamepads[i];
+                    
+                    // Pause game with START button during gameplay
+                    if (gameState === 'playing' && gamepadMapper.isButtonPressed(gamepad, 'START')) {
+                        const now = Date.now();
+                        if (!window.lastPauseTime || now - window.lastPauseTime > 500) {
+                            pauseGame();
+                            window.lastPauseTime = now;
+                        }
+                    }
+                    
+                    // Back button (B) to go back or pause
+                    if (gamepadMapper.isButtonPressed(gamepad, 'B')) {
+                        const now = Date.now();
+                        if (!window.lastBackTime || now - window.lastBackTime > 500) {
+                            if (gameState === 'playing') {
+                                pauseGame();
+                            } else if (gameState === 'paused') {
+                                resumeGame();
+                            }
+                            window.lastBackTime = now;
+                        }
+                    }
+                    
+                    // Game over restart
+                    if (gameState === 'gameover' && 
+                        (gamepadMapper.isButtonPressed(gamepad, 'A') || 
+                         gamepadMapper.isButtonPressed(gamepad, 'START'))) {
+                        const now = Date.now();
+                        if (!window.lastRestartTime || now - window.lastRestartTime > 1000) {
+                            restartGame();
+                            window.lastRestartTime = now;
+                        }
+                    }
+                }
+            }
+        }
+
         startButton.addEventListener('click', () => {
             setupDiv.style.display = 'none';
             startButton.parentElement.style.display = 'none';
             document.getElementById('gameOverMessage').style.display = 'none';
             gameContainer.style.display = 'flex';
+            
+            // Set game state
+            gameState = 'playing';
+            isPaused = false;
+            uiNavigation.disable();
             
             // Request fullscreen
             requestFullScreen();
@@ -379,7 +832,12 @@
             
             // まず利用可能なプレイヤーにコントローラーを自動割り当て
             const activePlayers = [];
-            playerButtons.forEach((button, index) => {
+            const gamePlayerButtons = [
+                document.getElementById('togglePlayer1'),
+                document.getElementById('togglePlayer2'),
+                document.getElementById('togglePlayer3')
+            ];
+            gamePlayerButtons.forEach((button, index) => {
                 const playerId = index + 1;
                 const mode = button.dataset.mode;
                 if (mode !== 'OFF') {
@@ -388,12 +846,23 @@
             });
             
             // アクティブなプレイヤーにコントローラーを順番に割り当て
-            console.log('Assigning controllers to active players:', activePlayers);
+            console.log('=== GAME START: Controller Assignment ===');
+            console.log('Active players:', activePlayers);
+            console.log('Available gamepads before assignment:', gamepadManager.availableGamepads.length);
+            
             activePlayers.forEach(playerId => {
-                gamepadManager.assignGamepadToPlayer(playerId);
+                console.log(`Attempting to assign controller to Player ${playerId}...`);
+                const result = gamepadManager.assignGamepadToPlayer(playerId);
+                if (result !== null) {
+                    console.log(`✓ Player ${playerId} assigned gamepad ${result}`);
+                } else {
+                    console.error(`✗ Player ${playerId} assignment FAILED`);
+                }
             });
             
-            playerButtons.forEach((button, index) => {
+            console.log('Final assignment state:', gamepadManager.getAssignmentInfo());
+            
+            gamePlayerButtons.forEach((button, index) => {
                 const playerId = index + 1;
                 const mode = button.dataset.mode;
                 const playerContainer = document.getElementById(`p${playerId}-container`);
@@ -412,13 +881,29 @@
               console.log('Game started with gamepad assignments:', gamepadManager.getAssignmentInfo());
               
               function gameLoop(time) {
+                  // Don't update if paused
+                  if (isPaused || gameState !== 'playing') {
+                      return;
+                  }
+                  
                   const activeGames = gameInstances.filter(game => !game.gameOver);
 
                   if (gameInstances.length > 1 && activeGames.length <= 1) {
                       const gameOverMsg = document.getElementById('gameOverMessage');
                       gameOverMsg.textContent = activeGames.length === 1 ? `PLAYER ${activeGames[0].playerId} WINS!` : 'DRAW!';
                       gameOverMsg.style.display = 'block';
+                      gameState = 'gameover';
                       cancelAnimationFrame(animationFrameId);
+                      
+                      // Setup game over navigation after delay
+                      setTimeout(() => {
+                          gameOverMsg.innerHTML = `
+                              ${gameOverMsg.textContent}<br>
+                              <small style="font-size: 0.8rem; margin-top: 20px; display: block;">
+                                  コントローラーのAボタンまたはSTARTボタンでリスタート
+                              </small>
+                          `;
+                      }, 2000);
                       
                       // Clean up gamepad assignments
                       gameInstances.forEach(game => {

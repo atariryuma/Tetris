@@ -125,23 +125,54 @@ class GamepadManager {
     }
     
     updateAvailableGamepads() {
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-        this.availableGamepads = [];
-        
-        console.log('Updating gamepad list, found', gamepads.length, 'gamepad slots');
-        
-        for (let i = 0; i < gamepads.length; i++) {
-            if (gamepads[i]) {
-                console.log(`Gamepad ${i}: ${gamepads[i].id}, connected: ${gamepads[i].connected}`);
-                this.availableGamepads.push({
-                    index: i,
-                    id: gamepads[i].id,
-                    gamepad: gamepads[i]
-                });
+        try {
+            // Gamepad API サポート確認
+            if (!navigator.getGamepads) {
+                console.error('ERROR: Gamepad API is not supported in this browser');
+                return;
             }
+
+            const gamepads = navigator.getGamepads();
+            this.availableGamepads = [];
+            
+            console.log('=== Gamepad Detection Debug ===');
+            console.log('Total gamepad slots found:', gamepads.length);
+            console.log('Raw gamepads array:', gamepads);
+            
+            for (let i = 0; i < gamepads.length; i++) {
+                console.log(`Slot ${i}:`, gamepads[i] ? 'OCCUPIED' : 'EMPTY');
+                if (gamepads[i]) {
+                    const gamepad = gamepads[i];
+                    console.log(`  - ID: ${gamepad.id}`);
+                    console.log(`  - Connected: ${gamepad.connected}`);
+                    console.log(`  - Buttons: ${gamepad.buttons.length}`);
+                    console.log(`  - Axes: ${gamepad.axes.length}`);
+                    console.log(`  - Timestamp: ${gamepad.timestamp}`);
+                    
+                    if (gamepad.connected) {
+                        this.availableGamepads.push({
+                            index: i,
+                            id: gamepad.id,
+                            gamepad: gamepad
+                        });
+                        console.log(`  ✓ Added to available list`);
+                    } else {
+                        console.log(`  ✗ Not connected, skipping`);
+                    }
+                }
+            }
+            
+            console.log(`Available gamepads after update: ${this.availableGamepads.length}`);
+            if (this.availableGamepads.length === 0) {
+                console.warn('WARNING: No gamepads detected! Make sure controllers are:');
+                console.warn('1. Properly connected');
+                console.warn('2. Recognized by the system');
+                console.warn('3. Press any button to activate');
+            }
+            
+        } catch (error) {
+            console.error('ERROR in updateAvailableGamepads:', error);
         }
-        
-        console.log('Available gamepads after update:', this.availableGamepads.length);
         
         // 切断されたゲームパッドの割り当てを削除
         for (let [gamepadIndex, playerId] of this.assignments.entries()) {
@@ -154,37 +185,57 @@ class GamepadManager {
     }
     
     forceRefreshGamepads() {
-        // Force a fresh check of gamepads by accessing the API multiple times
-        for (let i = 0; i < 5; i++) {
-            navigator.getGamepads();
+        try {
+            console.log('=== Force Refresh Gamepads ===');
+            // Force a fresh check of gamepads by accessing the API multiple times
+            for (let i = 0; i < 5; i++) {
+                const gamepads = navigator.getGamepads();
+                console.log(`Refresh attempt ${i + 1}: Found ${gamepads ? gamepads.length : 0} slots`);
+            }
+            this.updateAvailableGamepads();
+        } catch (error) {
+            console.error('ERROR in forceRefreshGamepads:', error);
         }
-        this.updateAvailableGamepads();
     }
     
     assignGamepadToPlayer(playerId) {
-        // 既に割り当てられている場合はスキップ
-        if (this.playerAssignments.has(playerId)) {
-            const existingIndex = this.playerAssignments.get(playerId);
-            console.log(`Player ${playerId} already has gamepad ${existingIndex}`);
-            return existingIndex;
-        }
-        
-        // 最新のゲームパッド情報を取得
-        this.updateAvailableGamepads();
-        
-        // 利用可能な未割り当てのゲームパッドを検索
-        for (let gamepadInfo of this.availableGamepads) {
-            if (!this.assignments.has(gamepadInfo.index)) {
-                this.assignments.set(gamepadInfo.index, playerId);
-                this.playerAssignments.set(playerId, gamepadInfo.index);
-                console.log(`Assigned gamepad ${gamepadInfo.index} (${gamepadInfo.id}) to Player ${playerId}`);
-                return gamepadInfo.index;
+        try {
+            console.log(`=== Assigning Gamepad to Player ${playerId} ===`);
+            
+            // 既に割り当てられている場合はスキップ
+            if (this.playerAssignments.has(playerId)) {
+                const existingIndex = this.playerAssignments.get(playerId);
+                console.log(`Player ${playerId} already has gamepad ${existingIndex}`);
+                return existingIndex;
             }
+            
+            // 最新のゲームパッド情報を取得
+            console.log('Updating gamepad list before assignment...');
+            this.updateAvailableGamepads();
+            
+            console.log(`Available gamepads: ${this.availableGamepads.length}`);
+            console.log('Current assignments:', Object.fromEntries(this.assignments));
+            
+            // 利用可能な未割り当てのゲームパッドを検索
+            for (let gamepadInfo of this.availableGamepads) {
+                console.log(`Checking gamepad ${gamepadInfo.index}: ${this.assignments.has(gamepadInfo.index) ? 'ASSIGNED' : 'FREE'}`);
+                if (!this.assignments.has(gamepadInfo.index)) {
+                    this.assignments.set(gamepadInfo.index, playerId);
+                    this.playerAssignments.set(playerId, gamepadInfo.index);
+                    console.log(`✓ Successfully assigned gamepad ${gamepadInfo.index} (${gamepadInfo.id}) to Player ${playerId}`);
+                    return gamepadInfo.index;
+                }
+            }
+            
+            console.error(`✗ FAILED: No available gamepad for Player ${playerId}`);
+            console.error(`Available gamepads: ${this.availableGamepads.length}`);
+            console.error(`Current assignments:`, Object.fromEntries(this.assignments));
+            return null;
+            
+        } catch (error) {
+            console.error(`ERROR in assignGamepadToPlayer for Player ${playerId}:`, error);
+            return null;
         }
-        
-        console.log(`No available gamepad for Player ${playerId}. Available gamepads:`, this.availableGamepads.length);
-        console.log(`Current assignments:`, Object.fromEntries(this.assignments));
-        return null;
     }
     
     unassignPlayer(playerId) {
@@ -221,9 +272,161 @@ class GamepadManager {
     }
 }
 
+// UI ナビゲーション管理クラス
+class UINavigationManager {
+    constructor() {
+        this.currentFocus = 0;
+        this.focusableElements = [];
+        this.isActive = false;
+        this.lastInputTime = {};
+        this.inputDelay = 300; // ms
+    }
+    
+    setFocusableElements(elements) {
+        this.focusableElements = elements;
+        this.currentFocus = 0;
+        this.updateVisualFocus();
+    }
+    
+    enable() {
+        this.isActive = true;
+        console.log('UI Navigation activated');
+    }
+    
+    disable() {
+        this.isActive = false;
+        this.clearVisualFocus();
+        console.log('UI Navigation deactivated');
+    }
+    
+    updateVisualFocus() {
+        this.focusableElements.forEach((element, index) => {
+            if (index === this.currentFocus) {
+                element.style.outline = '3px solid #fca311';
+                element.style.transform = 'scale(1.05)';
+                element.style.transition = 'all 0.2s ease';
+            } else {
+                element.style.outline = 'none';
+                element.style.transform = 'scale(1.0)';
+            }
+        });
+    }
+    
+    clearVisualFocus() {
+        this.focusableElements.forEach(element => {
+            element.style.outline = 'none';
+            element.style.transform = 'scale(1.0)';
+        });
+    }
+    
+    navigateUp() {
+        if (!this.isActive || this.focusableElements.length === 0) return;
+        this.currentFocus = (this.currentFocus - 1 + this.focusableElements.length) % this.focusableElements.length;
+        this.updateVisualFocus();
+        console.log(`Navigation: Focus moved to element ${this.currentFocus}`);
+    }
+    
+    navigateDown() {
+        if (!this.isActive || this.focusableElements.length === 0) return;
+        this.currentFocus = (this.currentFocus + 1) % this.focusableElements.length;
+        this.updateVisualFocus();
+        console.log(`Navigation: Focus moved to element ${this.currentFocus}`);
+    }
+    
+    navigateLeft() {
+        if (!this.isActive || this.focusableElements.length === 0) return;
+        this.currentFocus = (this.currentFocus - 1 + this.focusableElements.length) % this.focusableElements.length;
+        this.updateVisualFocus();
+        console.log(`Navigation: Focus moved to element ${this.currentFocus}`);
+    }
+    
+    navigateRight() {
+        if (!this.isActive || this.focusableElements.length === 0) return;
+        this.currentFocus = (this.currentFocus + 1) % this.focusableElements.length;
+        this.updateVisualFocus();
+        console.log(`Navigation: Focus moved to element ${this.currentFocus}`);
+    }
+    
+    activate() {
+        if (!this.isActive || this.focusableElements.length === 0) return;
+        const currentElement = this.focusableElements[this.currentFocus];
+        console.log('Navigation: Activating element', currentElement);
+        currentElement.click();
+    }
+    
+    handleGamepadInput() {
+        if (!this.isActive) return;
+        
+        const gamepads = navigator.getGamepads();
+        for (let i = 0; i < gamepads.length; i++) {
+            if (gamepads[i]) {
+                const gamepad = gamepads[i];
+                const now = Date.now();
+                
+                // D-pad navigation
+                if (gamepadMapper.isButtonPressed(gamepad, 'DPAD_UP')) {
+                    if (!this.lastInputTime.up || now - this.lastInputTime.up > this.inputDelay) {
+                        this.navigateUp();
+                        this.lastInputTime.up = now;
+                    }
+                } else if (gamepadMapper.isButtonPressed(gamepad, 'DPAD_DOWN')) {
+                    if (!this.lastInputTime.down || now - this.lastInputTime.down > this.inputDelay) {
+                        this.navigateDown();
+                        this.lastInputTime.down = now;
+                    }
+                } else if (gamepadMapper.isButtonPressed(gamepad, 'DPAD_LEFT')) {
+                    if (!this.lastInputTime.left || now - this.lastInputTime.left > this.inputDelay) {
+                        this.navigateLeft();
+                        this.lastInputTime.left = now;
+                    }
+                } else if (gamepadMapper.isButtonPressed(gamepad, 'DPAD_RIGHT')) {
+                    if (!this.lastInputTime.right || now - this.lastInputTime.right > this.inputDelay) {
+                        this.navigateRight();
+                        this.lastInputTime.right = now;
+                    }
+                }
+                
+                // Analog stick navigation
+                const leftStickX = gamepadMapper.getAxisValue(gamepad, 0, 0.5);
+                const leftStickY = gamepadMapper.getAxisValue(gamepad, 1, 0.5);
+                
+                if (Math.abs(leftStickX) > 0.5) {
+                    if (leftStickX > 0.5 && (!this.lastInputTime.stickRight || now - this.lastInputTime.stickRight > this.inputDelay)) {
+                        this.navigateRight();
+                        this.lastInputTime.stickRight = now;
+                    } else if (leftStickX < -0.5 && (!this.lastInputTime.stickLeft || now - this.lastInputTime.stickLeft > this.inputDelay)) {
+                        this.navigateLeft();
+                        this.lastInputTime.stickLeft = now;
+                    }
+                }
+                
+                if (Math.abs(leftStickY) > 0.5) {
+                    if (leftStickY > 0.5 && (!this.lastInputTime.stickDown || now - this.lastInputTime.stickDown > this.inputDelay)) {
+                        this.navigateDown();
+                        this.lastInputTime.stickDown = now;
+                    } else if (leftStickY < -0.5 && (!this.lastInputTime.stickUp || now - this.lastInputTime.stickUp > this.inputDelay)) {
+                        this.navigateUp();
+                        this.lastInputTime.stickUp = now;
+                    }
+                }
+                
+                // Activation buttons
+                if (gamepadMapper.isButtonPressed(gamepad, 'A') || 
+                    gamepadMapper.isButtonPressed(gamepad, 'START')) {
+                    if (!this.lastInputTime.activate || now - this.lastInputTime.activate > this.inputDelay) {
+                        this.activate();
+                        this.lastInputTime.activate = now;
+                    }
+                }
+            }
+        }
+    }
+}
+
 // グローバルインスタンス
 const gamepadManager = new GamepadManager();
 const gamepadMapper = new UniversalGamepadMapper();
+const uiNavigation = new UINavigationManager();
 
 const shapes = [
     { shape: [[1, 1, 1, 1]], color: "#00FFFF" }, // Iテトリミノ
@@ -295,7 +498,14 @@ class Tetris {
     }
 
     assignGamepad() {
-        return gamepadManager.assignGamepadToPlayer(this.playerId);
+        console.log(`Player ${this.playerId} (${this.mode}) requesting gamepad assignment...`);
+        const result = gamepadManager.assignGamepadToPlayer(this.playerId);
+        if (result !== null) {
+            console.log(`Player ${this.playerId} successfully got gamepad ${result}`);
+        } else {
+            console.error(`Player ${this.playerId} FAILED to get gamepad`);
+        }
+        return result;
     }
     
     hasGamepadInput() {
