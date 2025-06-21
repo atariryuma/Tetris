@@ -12,8 +12,8 @@ from audio_manager import AudioManager
 from ui_renderer import UIRenderer
 from cpu_ai import AdaptiveCPU
 
-# Import safe_events from main module
-from main import safe_events
+# safe_events は main.py 経由でなく utils から直接読み込む
+# ただしここでは event_source 経由で呼び出すため、utils をインポート不要
 
 class GameManager:
     """Main game manager that coordinates all game systems."""

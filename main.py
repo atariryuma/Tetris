@@ -8,14 +8,7 @@ import os
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT, VSYNC
 from game_manager import GameManager
 from font_manager import cleanup_fonts
-
-def safe_events():
-    """Safely retrieve pygame events to avoid platform-specific polling errors."""
-    try:
-        return pygame.event.get()
-    except Exception as e:
-        print(f"[WARN] Event polling error: {e}")
-        return []
+from utils import safe_events  # ← ここを変更
 
 def main():
     """Initialize and run the Tetris game."""
@@ -67,25 +60,24 @@ def main():
     print("- F1: Show volume info")
     print("- F2/F3: Adjust master volume")
     print("\nGamepad support:")
-    print("- Xbox, PlayStation, Nintendo Switch Pro controllers")
+    print("- Xbox, PlayStation, Nintendo Switch Pro")
     print("- Plug in controllers before or during play")
-    print("- Multiple controllers supported for multiplayer")
 
-    # Load BGM safely
+    # BGM安全読み込み
     bgm_path = os.path.join(os.path.dirname(__file__), 'assets', 'sounds', 'menu_music.ogg')
     if not os.path.exists(bgm_path):
-        print(f"[INFO] BGM file not found, continuing without music: {os.path.basename(bgm_path)}")
+        print(f"[INFO] BGM not found, skipping: {os.path.basename(bgm_path)}")
     else:
         try:
             pygame.mixer.music.load(bgm_path)
             pygame.mixer.music.play(-1)
         except Exception as e:
-            print(f"[WARN] Failed to play BGM: {e}")
+            print(f"[WARN] BGM play failed: {e}")
 
     try:
-        # Pass safe_events into GameManager so all event polling uses the wrapper
-        game_manager = GameManager(screen, event_source=safe_events)
-        game_manager.run()
+        # ゲーム開始
+        gm = GameManager(screen, event_source=safe_events)
+        gm.run()
     except KeyboardInterrupt:
         print("\nGame interrupted by user")
     except Exception as e:
