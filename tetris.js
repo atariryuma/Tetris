@@ -10,6 +10,10 @@ const boardWidth = 10;
 const boardHeight = 20;
 const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
 
+// 特殊ブロックの種類と出現確率
+const specialBlockTypes = ['bomb', 'shield'];
+const SPECIAL_BLOCK_CHANCE = 0.1; // 10% の確率で特殊ブロックを生成
+
 const keyBindings = [
     { left: 'ArrowLeft', right: 'ArrowRight', down: 'ArrowDown', rotate: 'z', hardDrop: 'ArrowUp', flip: 'x' },
     { left: 'a', right: 'd', down: 's', rotate: 'w', hardDrop: 'q', flip: 'e' },
@@ -30,7 +34,12 @@ const shapes = [
 
 function getRandomShape() {
     const randomIndex = Math.floor(Math.random() * shapes.length);
-    return deepCopyShape(shapes[randomIndex]);
+    const shape = deepCopyShape(shapes[randomIndex]);
+    if (Math.random() < SPECIAL_BLOCK_CHANCE) {
+        const typeIndex = Math.floor(Math.random() * specialBlockTypes.length);
+        shape.type = specialBlockTypes[typeIndex];
+    }
+    return shape;
 }
 
 function deepCopyShape(shape) {
@@ -241,24 +250,32 @@ function handleKeyboardInput(event) {
     });
 }
 
-function drawBlock(ctx, x, y, color) {
+function drawBlock(ctx, x, y, color, type = null) {
     ctx.fillStyle = color;
     ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
     ctx.strokeStyle = '#000';
     ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+    if (type) {
+        ctx.strokeStyle = 'gold';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x * blockSize + 4, y * blockSize + 4, blockSize - 8, blockSize - 8);
+        ctx.lineWidth = 1;
+    }
 }
 
 function draw(player) {
     const ctx = player.ctx;
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     player.board.forEach((row, y) => {
-        row.forEach((color, x) => {
-            if (color) {
-                drawBlock(ctx, x, y, color);
+        row.forEach((cell, x) => {
+            if (cell) {
+                const color = cell.color || cell;
+                const type = cell.type || null;
+                drawBlock(ctx, x, y, color, type);
             }
         });
     });
-    drawShape(ctx, player.currentShape.shape, player.currentPosition.x, player.currentPosition.y, player.currentShape.color);
+    drawShape(ctx, player.currentShape.shape, player.currentPosition.x, player.currentPosition.y, player.currentShape.color, player.currentShape.type);
     drawGhostShape(ctx, player.currentShape.shape, player.ghostPosition.x, player.ghostPosition.y, player.currentShape.color);
     drawScore(player);  // スコアを描画
 }
@@ -272,11 +289,11 @@ function drawScore(player) {
     ctx.fillText(`${player.name} Score: ${player.score}`, 10, 10);
 }
 
-function drawShape(ctx, shape, x, y, color) {
+function drawShape(ctx, shape, x, y, color, type = null) {
     shape.forEach((row, dy) => {
         row.forEach((cell, dx) => {
             if (cell) {
-                drawBlock(ctx, x + dx, y + dy, color);
+                drawBlock(ctx, x + dx, y + dy, color, type);
             }
         });
     });
@@ -284,7 +301,7 @@ function drawShape(ctx, shape, x, y, color) {
 
 function drawGhostShape(ctx, shape, x, y, color) {
     ctx.globalAlpha = 0.5;
-    drawShape(ctx, shape, x, y, color);
+    drawShape(ctx, shape, x, y, color, null);
     ctx.globalAlpha = 1;
 }
 
@@ -474,7 +491,10 @@ function placeShape(player) {
     player.currentShape.shape.forEach((row, dy) => {
         row.forEach((cell, dx) => {
             if (cell) {
-                player.board[player.currentPosition.y + dy][player.currentPosition.x + dx] = player.currentShape.color;
+                player.board[player.currentPosition.y + dy][player.currentPosition.x + dx] = {
+                    color: player.currentShape.color,
+                    type: player.currentShape.type || null
+                };
                 if (player.currentShape.type) {
                     specialBlocks.push({ x: player.currentPosition.x + dx, y: player.currentPosition.y + dy, type: player.currentShape.type });
                 }
