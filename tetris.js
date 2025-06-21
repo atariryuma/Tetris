@@ -40,8 +40,8 @@ class Tetris {
         
         this.canvas.width = boardWidth * blockSize;
         this.canvas.height = boardHeight * blockSize;
-        this.nextCanvas.width = 4 * blockSize;
-        this.nextCanvas.height = 4 * blockSize;
+        this.nextCanvas.width = 4 * (blockSize / 4);
+        this.nextCanvas.height = 4 * (blockSize / 4);
         
         this.board = Array.from({ length: boardHeight }, () => Array(boardWidth).fill(0));
         this.currentShape = null;
@@ -49,7 +49,7 @@ class Tetris {
         this.currentPosition = { x: Math.floor(boardWidth / 2) - 1, y: 0 };
         this.ghostPosition = { x: 0, y: 0 };
         this.dropInterval = 700;
-        this.lastDropTime = Date.now();
+        this.lastDropTime = 0;
         this.gameOver = false;
         this.score = 0;
         
@@ -63,13 +63,15 @@ class Tetris {
         
         // CPUのAI設定
         this.cpuMoveInterval = 500;
-        this.lastCPUMoveTime = Date.now();
+        this.lastCPUMoveTime = 0;
     }
 
     start() {
         this.currentShape = getRandomShape();
         this.nextShape = getRandomShape();
         this.updateGhostPosition();
+        this.lastDropTime = performance.now();
+        this.lastCPUMoveTime = performance.now();
         this.draw();
         this.drawNext();
     }
@@ -99,6 +101,7 @@ class Tetris {
         }
         
         this.draw();
+        this.drawNext();
         return 0;
     }
 
@@ -275,6 +278,7 @@ class Tetris {
         
         this.nextCtx.clearRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
         
+        const nextBlockSize = blockSize / 4; // Next キャンバス用のより小さいブロックサイズ
         const startX = Math.floor((4 - this.nextShape.shape[0].length) / 2);
         const startY = Math.floor((4 - this.nextShape.shape.length) / 2);
         
@@ -282,9 +286,9 @@ class Tetris {
             row.forEach((cell, dx) => {
                 if (cell) {
                     this.nextCtx.fillStyle = this.nextShape.color;
-                    this.nextCtx.fillRect((startX + dx) * blockSize, (startY + dy) * blockSize, blockSize, blockSize);
+                    this.nextCtx.fillRect((startX + dx) * nextBlockSize, (startY + dy) * nextBlockSize, nextBlockSize, nextBlockSize);
                     this.nextCtx.strokeStyle = '#000';
-                    this.nextCtx.strokeRect((startX + dx) * blockSize, (startY + dy) * blockSize, blockSize, blockSize);
+                    this.nextCtx.strokeRect((startX + dx) * nextBlockSize, (startY + dy) * nextBlockSize, nextBlockSize, nextBlockSize);
                 }
             });
         });
