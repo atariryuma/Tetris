@@ -207,18 +207,6 @@
         border-radius: 10px;
     }
 
-    .gamepad-status {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 10px;
-        border-radius: 5px;
-        font-size: 0.8rem;
-        max-width: 300px;
-        z-index: 50;
-    }
 
   </style>
 </head>
@@ -305,12 +293,6 @@
   </div>
   
   <div id="gameOverMessage" class="game-over-message">GAME OVER</div>
-  <div id="gamepadStatus" class="gamepad-status">
-    <strong>コントローラー状況:</strong><br>
-    <div id="gamepadList">コントローラーを検索中...</div>
-    <br>
-    <button onclick="manualAssignController()" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">手動割り当て</button>
-  </div>
 
   <script src="tetris.js"></script>
   
@@ -318,141 +300,26 @@
     document.addEventListener('DOMContentLoaded', () => {
         const startButton = document.getElementById('startButton');
         
-        // Initialize GamepadManager
+        // Initialize GamepadManager and force immediate detection
         gamepadManager.startMonitoring();
+        gamepadManager.forceRefreshGamepads();
         
-        function updateGamepadStatus() {
-            const gamepadList = document.getElementById('gamepadList');
-            const assignments = gamepadManager.getAssignmentInfo();
-            const availableGamepads = gamepadManager.availableGamepads;
-            
-            let statusHTML = '';
-            
-            if (availableGamepads.length === 0) {
-                statusHTML = 'コントローラーが見つかりません<br><small>ボタンを押してアクティベートしてください</small>';
-            } else {
-                statusHTML += `接続中: ${availableGamepads.length}台<br>`;
-                availableGamepads.forEach(gp => {
-                    const gamepad = navigator.getGamepads()[gp.index];
-                    const controllerType = gamepad ? gamepadMapper.detectControllerType(gamepad) : 'unknown';
-                    const assignedPlayer = Object.keys(assignments).find(playerId => 
-                        assignments[playerId].gamepadIndex === gp.index);
-                    
-                    statusHTML += `[${gp.index}] ${controllerType.toUpperCase()}<br>`;
-                    statusHTML += `<small>${gp.id.substring(0, 30)}${gp.id.length > 30 ? '...' : ''}</small><br>`;
-                    
-                    if (assignedPlayer) {
-                        statusHTML += `<strong>→ Player ${assignedPlayer}</strong>`;
-                    } else {
-                        statusHTML += `<span style="color: #888">(未割り当て)</span>`;
-                    }
-                    statusHTML += '<br><br>';
-                });
-                
-                statusHTML += '<small>Xbox One操作方法:<br>';
-                statusHTML += '・左スティック/十字キー: 移動<br>';
-                statusHTML += '・A,B,X,Yボタン: 回転<br>';
-                statusHTML += '・十字キー上/LB: ハードドロップ<br>';
-                statusHTML += '・RB: 回転</small>';
-            }
-            
-            gamepadList.innerHTML = statusHTML;
-        }
         
-        // Update status periodically
-        setInterval(updateGamepadStatus, 2000);
-        updateGamepadStatus();
-        
-        // Real-time button testing (ボタンテスト機能)
-        let buttonTestActive = false;
-        function startButtonTest() {
-            if (buttonTestActive) return;
-            buttonTestActive = true;
-            
-            function testLoop() {
-                if (!buttonTestActive) return;
-                
-                const gamepads = navigator.getGamepads();
-                for (let i = 0; i < gamepads.length; i++) {
-                    if (gamepads[i]) {
-                        const gamepad = gamepads[i];
-                        const pressedButtons = gamepadMapper.detectPressedButtons(gamepad);
-                        const controllerType = gamepadMapper.detectControllerType(gamepad);
-                        
-                        if (pressedButtons.length > 0) {
-                            console.log(`Gamepad ${i} [${controllerType}] - Buttons pressed:`, pressedButtons);
-                            
-                            // Test specific actions
-                            const actions = ['DPAD_LEFT', 'DPAD_RIGHT', 'DPAD_UP', 'DPAD_DOWN', 'A', 'B', 'X', 'Y', 'LB', 'RB'];
-                            const activeActions = actions.filter(action => gamepadMapper.isButtonPressed(gamepad, action));
-                            if (activeActions.length > 0) {
-                                console.log(`Actions detected:`, activeActions);
-                            }
-                        }
-                    }
-                }
-                
-                requestAnimationFrame(testLoop);
-            }
-            
-            console.log('Button test started. Press any button on your controller...');
-            testLoop();
-        }
-        
-        // Start button test when page loads (コントローラーテスト開始)
-        setTimeout(startButtonTest, 2000);
-        
-        // Manual controller assignment function
-        window.manualAssignController = function() {
-            console.log('=== Manual Controller Assignment ===');
-            
-            // Force gamepad detection
+        // Force gamepad refresh periodically
+        setInterval(() => {
             gamepadManager.forceRefreshGamepads();
-            
-            console.log('Available gamepads:', gamepadManager.availableGamepads);
-            console.log('Current assignments:', gamepadManager.getAssignmentInfo());
-            
-            if (gamepadManager.availableGamepads.length === 0) {
-                alert('コントローラーが検出されません。\n\n1. コントローラーが正しく接続されているか確認してください\n2. コントローラーのボタンを押してください\n3. ページをリロードしてください');
-                return;
-            }
-            
-            // Clear all assignments first
-            gamepadManager.assignments.clear();
-            gamepadManager.playerAssignments.clear();
-            
-            // Assign controllers to players 1, 2, 3 in order
-            const playerIds = [1, 2, 3];
-            for (let playerId of playerIds) {
-                const assigned = gamepadManager.assignGamepadToPlayer(playerId);
-                if (assigned !== null) {
-                    console.log(`Successfully assigned gamepad ${assigned} to Player ${playerId}`);
-                } else {
-                    console.log(`Failed to assign gamepad to Player ${playerId}`);
-                    break;
-                }
-            }
-            
-            updateGamepadStatus();
-            console.log('Final assignments:', gamepadManager.getAssignmentInfo());
-            
-            if (Object.keys(gamepadManager.getAssignmentInfo()).length > 0) {
-                alert(`コントローラー割り当て完了！\n割り当てられたコントローラー: ${Object.keys(gamepadManager.getAssignmentInfo()).length}台`);
-            }
-        };
+        }, 500);
+        
         
         // Gamepad connection events
         window.addEventListener('gamepadconnected', (e) => {
             console.log('Gamepad connected:', e.gamepad.id, 'at index', e.gamepad.index);
             gamepadManager.updateAvailableGamepads();
-            updateGamepadStatus();
-            console.log('Current gamepad assignments:', gamepadManager.getAssignmentInfo());
         });
         
         window.addEventListener('gamepaddisconnected', (e) => {
             console.log('Gamepad disconnected:', e.gamepad.id, 'at index', e.gamepad.index);
             gamepadManager.updateAvailableGamepads();
-            updateGamepadStatus();
         });
         
         if (typeof Tetris === 'undefined') {
@@ -541,9 +408,8 @@
             });
 
             if(gameInstances.length > 0) {
-              // Log gamepad assignments and update display
+              // Log gamepad assignments
               console.log('Game started with gamepad assignments:', gamepadManager.getAssignmentInfo());
-              updateGamepadStatus();
               
               function gameLoop(time) {
                   const activeGames = gameInstances.filter(game => !game.gameOver);
