@@ -207,6 +207,19 @@
         border-radius: 10px;
     }
 
+    .gamepad-status {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 0.8rem;
+        max-width: 300px;
+        z-index: 50;
+    }
+
   </style>
 </head>
 <body>
@@ -292,6 +305,10 @@
   </div>
   
   <div id="gameOverMessage" class="game-over-message">GAME OVER</div>
+  <div id="gamepadStatus" class="gamepad-status">
+    <strong>コントローラー状況:</strong><br>
+    <div id="gamepadList">コントローラーを検索中...</div>
+  </div>
 
   <script src="tetris.js"></script>
   
@@ -299,35 +316,53 @@
     document.addEventListener('DOMContentLoaded', () => {
         const startButton = document.getElementById('startButton');
         
-        // Gamepad detection
-        let gamepadDetectionInterval;
+        // Initialize GamepadManager
+        gamepadManager.startMonitoring();
         
-        function detectGamepads() {
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            const connectedGamepads = Array.from(gamepads).filter(gp => gp !== null);
+        function updateGamepadStatus() {
+            const gamepadList = document.getElementById('gamepadList');
+            const assignments = gamepadManager.getAssignmentInfo();
+            const availableGamepads = gamepadManager.availableGamepads;
             
-            if (connectedGamepads.length > 0) {
-                console.log('Connected gamepads:', connectedGamepads.map(gp => gp.id));
-                console.log('Gamepad buttons available:', connectedGamepads[0].buttons.length);
-                console.log('Gamepad axes available:', connectedGamepads[0].axes.length);
+            let statusHTML = '';
+            
+            if (availableGamepads.length === 0) {
+                statusHTML = 'コントローラーが見つかりません';
             } else {
-                console.log('No gamepads detected');
+                statusHTML += `接続中: ${availableGamepads.length}台<br>`;
+                availableGamepads.forEach(gp => {
+                    const assignedPlayer = Object.keys(assignments).find(playerId => 
+                        assignments[playerId].gamepadIndex === gp.index);
+                    statusHTML += `[${gp.index}] ${gp.id.substring(0, 20)}...`;
+                    if (assignedPlayer) {
+                        statusHTML += ` → Player ${assignedPlayer}`;
+                    } else {
+                        statusHTML += ` (未割り当て)`;
+                    }
+                    statusHTML += '<br>';
+                });
             }
+            
+            gamepadList.innerHTML = statusHTML;
         }
+        
+        // Update status periodically
+        setInterval(updateGamepadStatus, 2000);
+        updateGamepadStatus();
         
         // Gamepad connection events
         window.addEventListener('gamepadconnected', (e) => {
             console.log('Gamepad connected:', e.gamepad.id, 'at index', e.gamepad.index);
-            detectGamepads();
+            gamepadManager.updateAvailableGamepads();
+            updateGamepadStatus();
+            console.log('Current gamepad assignments:', gamepadManager.getAssignmentInfo());
         });
         
         window.addEventListener('gamepaddisconnected', (e) => {
             console.log('Gamepad disconnected:', e.gamepad.id, 'at index', e.gamepad.index);
+            gamepadManager.updateAvailableGamepads();
+            updateGamepadStatus();
         });
-        
-        // Start gamepad detection
-        gamepadDetectionInterval = setInterval(detectGamepads, 3000);
-        detectGamepads(); // Initial detection
         
         if (typeof Tetris === 'undefined') {
             console.error("エラー: 'Tetris' クラスが見つかりません。tetris.jsを確認してください。");
@@ -399,8 +434,9 @@
             });
 
             if(gameInstances.length > 0) {
-              // Stop gamepad detection during game
-              clearInterval(gamepadDetectionInterval);
+              // Log gamepad assignments and update display
+              console.log('Game started with gamepad assignments:', gamepadManager.getAssignmentInfo());
+              updateGamepadStatus();
               
               function gameLoop(time) {
                   const activeGames = gameInstances.filter(game => !game.gameOver);
@@ -410,8 +446,12 @@
                       gameOverMsg.textContent = activeGames.length === 1 ? `PLAYER ${activeGames[0].playerId} WINS!` : 'DRAW!';
                       gameOverMsg.style.display = 'block';
                       cancelAnimationFrame(animationFrameId);
-                      // Restart gamepad detection
-                      gamepadDetectionInterval = setInterval(detectGamepads, 3000);
+                      
+                      // Clean up gamepad assignments
+                      gameInstances.forEach(game => {
+                          gamepadManager.unassignPlayer(game.playerId);
+                      });
+                      
                       return;
                   }
                   

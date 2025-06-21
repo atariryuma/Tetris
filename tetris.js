@@ -4,6 +4,110 @@ const boardWidth = 10;
 const boardHeight = 20;
 const INPUT_INTERVAL = 180; // 入力の最小間隔(ms)
 
+// グローバルGamepad管理システム
+class GamepadManager {
+    constructor() {
+        this.assignments = new Map(); // gamepadIndex -> playerId
+        this.playerAssignments = new Map(); // playerId -> gamepadIndex
+        this.availableGamepads = [];
+        this.updateInterval = null;
+    }
+    
+    startMonitoring() {
+        this.updateAvailableGamepads();
+        this.updateInterval = setInterval(() => {
+            this.updateAvailableGamepads();
+        }, 1000);
+    }
+    
+    stopMonitoring() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+    }
+    
+    updateAvailableGamepads() {
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        this.availableGamepads = [];
+        
+        for (let i = 0; i < gamepads.length; i++) {
+            if (gamepads[i]) {
+                this.availableGamepads.push({
+                    index: i,
+                    id: gamepads[i].id,
+                    gamepad: gamepads[i]
+                });
+            }
+        }
+        
+        // 切断されたゲームパッドの割り当てを削除
+        for (let [gamepadIndex, playerId] of this.assignments.entries()) {
+            if (!this.availableGamepads.find(gp => gp.index === gamepadIndex)) {
+                console.log(`Gamepad ${gamepadIndex} disconnected, removing assignment from Player ${playerId}`);
+                this.assignments.delete(gamepadIndex);
+                this.playerAssignments.delete(playerId);
+            }
+        }
+    }
+    
+    assignGamepadToPlayer(playerId) {
+        // 既に割り当てられている場合はスキップ
+        if (this.playerAssignments.has(playerId)) {
+            return this.playerAssignments.get(playerId);
+        }
+        
+        // 利用可能な未割り当てのゲームパッドを検索
+        for (let gamepadInfo of this.availableGamepads) {
+            if (!this.assignments.has(gamepadInfo.index)) {
+                this.assignments.set(gamepadInfo.index, playerId);
+                this.playerAssignments.set(playerId, gamepadInfo.index);
+                console.log(`Assigned gamepad ${gamepadInfo.index} (${gamepadInfo.id}) to Player ${playerId}`);
+                return gamepadInfo.index;
+            }
+        }
+        
+        console.log(`No available gamepad for Player ${playerId}`);
+        return null;
+    }
+    
+    unassignPlayer(playerId) {
+        const gamepadIndex = this.playerAssignments.get(playerId);
+        if (gamepadIndex !== undefined) {
+            this.assignments.delete(gamepadIndex);
+            this.playerAssignments.delete(playerId);
+            console.log(`Unassigned gamepad ${gamepadIndex} from Player ${playerId}`);
+        }
+    }
+    
+    getGamepadForPlayer(playerId) {
+        const gamepadIndex = this.playerAssignments.get(playerId);
+        if (gamepadIndex === undefined) return null;
+        
+        const gamepads = navigator.getGamepads();
+        return gamepads[gamepadIndex] || null;
+    }
+    
+    isGamepadAssigned(gamepadIndex) {
+        return this.assignments.has(gamepadIndex);
+    }
+    
+    getAssignmentInfo() {
+        const info = {};
+        for (let [gamepadIndex, playerId] of this.assignments.entries()) {
+            const gamepadInfo = this.availableGamepads.find(gp => gp.index === gamepadIndex);
+            info[playerId] = {
+                gamepadIndex,
+                gamepadId: gamepadInfo ? gamepadInfo.id : 'Unknown'
+            };
+        }
+        return info;
+    }
+}
+
+// グローバルインスタンス
+const gamepadManager = new GamepadManager();
+
 const shapes = [
     { shape: [[1, 1, 1, 1]], color: "#00FFFF" }, // Iテトリミノ
     { shape: [[1, 1, 1], [0, 1, 0]], color: "#FFA500" }, // Tテトリミノ
@@ -66,8 +170,6 @@ class Tetris {
         this.lastCPUMoveTime = 0;
         
         // Gamepad設定
-        this.gamepadIndex = null;
-        this.gamepadAssigned = false;
         this.gamepadButtonStates = {};
         
         // Animation設定
@@ -76,50 +178,21 @@ class Tetris {
     }
 
     assignGamepad() {
-        if (this.gamepadAssigned) return;
-        
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-        console.log(`Player ${this.playerId}: Checking for gamepads...`, gamepads.length);
-        
-        for (let i = 0; i < gamepads.length; i++) {
-            if (gamepads[i] && !this.isGamepadAssigned(i)) {
-                this.gamepadIndex = i;
-                this.gamepadAssigned = true;
-                console.log(`Player ${this.playerId}: Assigned gamepad ${i} - ${gamepads[i].id}`);
-                break;
-            }
-        }
-        
-        if (!this.gamepadAssigned) {
-            console.log(`Player ${this.playerId}: No available gamepad found`);
-        }
-    }
-    
-    isGamepadAssigned(index) {
-        // グローバルなゲームパッド管理（簡易版）
-        if (window.assignedGamepads && window.assignedGamepads[index]) {
-            return window.assignedGamepads[index] !== this.playerId;
-        }
-        return false;
+        return gamepadManager.assignGamepadToPlayer(this.playerId);
     }
     
     hasGamepadInput() {
-        if (!this.gamepadAssigned || this.gamepadIndex === null) {
-            this.assignGamepad(); // 再試行
-            return false;
-        }
-        
-        const gamepads = navigator.getGamepads();
-        const gamepad = gamepads[this.gamepadIndex];
+        const gamepad = gamepadManager.getGamepadForPlayer(this.playerId);
         if (!gamepad) {
-            console.log(`Player ${this.playerId}: Gamepad ${this.gamepadIndex} disconnected`);
-            this.gamepadAssigned = false;
-            this.gamepadIndex = null;
             return false;
         }
         
         return gamepad.buttons.some(button => button.pressed) || 
                Math.abs(gamepad.axes[0]) > 0.1 || Math.abs(gamepad.axes[1]) > 0.1;
+    }
+    
+    getAssignedGamepad() {
+        return gamepadManager.getGamepadForPlayer(this.playerId);
     }
 
     start() {
@@ -129,16 +202,8 @@ class Tetris {
         this.lastDropTime = performance.now();
         this.lastCPUMoveTime = performance.now();
         
-        // ゲームパッドの再割り当てを試行
+        // ゲームパッドの割り当てを試行
         this.assignGamepad();
-        
-        // グローバルゲームパッド管理を初期化
-        if (!window.assignedGamepads) {
-            window.assignedGamepads = {};
-        }
-        if (this.gamepadAssigned) {
-            window.assignedGamepads[this.gamepadIndex] = this.playerId;
-        }
         
         this.draw();
         this.drawNext();
@@ -148,7 +213,7 @@ class Tetris {
         if (this.gameOver) return 0;
         
         // Handle gamepad input if connected
-        if (this.mode === 'ON' && this.gamepadIndex !== null) {
+        if (this.mode === 'ON') {
             this.handleGamepadInput(time);
         }
         
@@ -179,15 +244,8 @@ class Tetris {
     }
     
     handleGamepadInput(time) {
-        if (!this.gamepadAssigned || this.gamepadIndex === null) return;
-        
-        const gamepads = navigator.getGamepads();
-        const gamepad = gamepads[this.gamepadIndex];
-        if (!gamepad) {
-            this.gamepadAssigned = false;
-            this.gamepadIndex = null;
-            return;
-        }
+        const gamepad = this.getAssignedGamepad();
+        if (!gamepad) return;
         
         const inputInterval = INPUT_INTERVAL;
         
