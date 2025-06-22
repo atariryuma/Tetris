@@ -69,13 +69,9 @@ class GameManager:
             
             # Reset just_pressed keys each frame
             self.keys_just_pressed = {}
-            
-            # Use safe_events to retrieve events
-            for event in self.event_source():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                else:
-                    self.handle_event(event)
+
+            # Process all pending events
+            self.handle_events()
             
             # Game update and render calls
             self.update(delta_time)
@@ -87,7 +83,20 @@ class GameManager:
         # Cleanup
         self.audio_manager.cleanup()
         pygame.quit()
-    
+
+    def handle_events(self):
+        """Process all pending pygame events safely."""
+        try:
+            events = self.event_source()
+        except Exception:
+            events = []
+
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.running = False
+            else:
+                self.handle_event(event)
+
     def handle_event(self, event):
         """Handle a single pygame event."""
         if event.type == pygame.QUIT:

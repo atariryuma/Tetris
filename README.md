@@ -4,12 +4,9 @@ A modern, feature-rich multiplayer Tetris game built with Python and Pygame, sup
 
 ## Features
 
-### 🎮 Universal Controller Support
-- **Xbox Controllers**: Xbox One, Xbox Series X/S
-- **PlayStation Controllers**: DualShock 4, DualSense (PS5)
-- **Nintendo Switch Pro Controller**
-- **Generic USB Gamepads**: Automatic mapping fallback
-- **Hot-plug Support**: Connect controllers during gameplay
+### 🎮 Xbox One Controller Only
+- **Xbox One controller supported**
+- **Hot-plug Support**: Connect the controller during gameplay
 - **Keyboard Fallback**: Full game playable with keyboard
 
 ### 🎯 Advanced Tetris Mechanics
@@ -73,6 +70,9 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### Japanese Font
+To display the Japanese text used in the menus, install a font such as **Noto Sans JP** and place `NotoSansJP-Regular.ttf` in `assets/fonts/`. If the file is missing, the game falls back to a system font.
+
 ## Controls
 
 ### Keyboard Controls
@@ -108,13 +108,13 @@ python main.py
 
 ### Gamepad Controls
 
-#### Universal Mapping (Works with Xbox, PlayStation, Nintendo)
+#### Xbox One Controller Mapping
 - **D-Pad/Left Stick**: Move pieces and navigate menus
-- **A Button (Xbox) / X Button (PlayStation)**: Rotate clockwise
-- **B Button (Xbox) / Circle Button (PlayStation)**: Rotate counter-clockwise
-- **Y Button (Xbox) / Triangle Button (PlayStation)**: Hard drop
-- **X Button (Xbox) / Square Button (PlayStation)**: Hold piece
-- **Start/Options Button**: Pause/Resume
+- **A Button**: Rotate clockwise
+- **B Button**: Rotate counter-clockwise
+- **Y Button**: Hard drop
+- **X Button**: Hold piece
+- **Start Button**: Pause/Resume
 - **Left/Right Bumpers**: Alternative rotation controls
 
 ## Game Modes

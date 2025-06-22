@@ -48,7 +48,7 @@ def test_game_fonts():
         
         # Controls text
         ("矢印キー: 移動・選択  Z/X: 回転", "japanese", 18, "Controls 1"),
-        ("ゲームパッド対応: Xbox, PlayStation", "japanese", 18, "Controls 2"),
+        ("ゲームパッド対応: Xbox One コントローラーのみ", "japanese", 18, "Controls 2"),
     ]
     
     print("\nTesting text rendering:")
