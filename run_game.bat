@@ -1,9 +1,9 @@
 @echo off
-rem run_game.bat
-
-rem 1. ゲームを起動
+echo Starting Tetris Game...
 python main.py
-
-rem 2. ゲームが閉じたらこのバッチも終了
-exit /B %ERRORLEVEL%
-
+if %ERRORLEVEL% NEQ 0 (
+    echo Game encountered an error.
+    pause
+) else (
+    echo Game completed successfully.
+)

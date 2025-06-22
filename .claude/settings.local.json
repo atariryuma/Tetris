@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(SDL_VIDEODRIVER=dummy .venv/bin/python main.py)",
+      "Bash(chmod:*)",
+      "Bash(./run_game.sh:*)",
+      "Bash(sed:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(rg:*)"
+    ],
+    "deny": []
+  }
+}

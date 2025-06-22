@@ -1,11 +1,16 @@
 [project]
-name = "tetris"
-version = "0.1.0"
-description = "Add your description here"
+name = "tetris-multiplayer"
+version = "1.0.0"
+description = "Multiplayer Tetris game with controller support"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.8"
 dependencies = [
-    "numpy>=2.3.1",
-    "pygame>=2.6.1",
-    "pygame-ce>=2.5.5",
+    "pygame>=2.5.0",
 ]
+
+[project.optional-dependencies]
+audio = ["numpy>=1.20.0"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
