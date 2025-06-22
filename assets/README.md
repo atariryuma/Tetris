@@ -4,13 +4,13 @@ This directory contains game assets including fonts, sounds, and images.
 
 ## Directory Structure
 
-- `fonts/` - Font files for UI text (Google Fonts included)
+- `fonts/` - Optional font files for custom UI text
 - `sounds/` - Audio files (BGM and sound effects)
 - `images/` - Image files (icons, sprites, etc.)
 
-## Included Google Fonts
+## Recommended Google Fonts
 
-The following high-quality Google Fonts are included for the best gaming experience:
+The following high-quality Google Fonts are supported. Download them separately for the best experience:
 
 ### Game Fonts
 - **Press Start 2P** (`PressStart2P-Regular.ttf`) - 118KB
