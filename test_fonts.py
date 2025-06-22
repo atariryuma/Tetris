@@ -95,13 +95,15 @@ def test_fonts():
         else:
             print(f"  ✗ {font_file}: Missing")
     
-    print("\nFont test complete. Press any key to close...")
-    
-    # Wait for user input
+    print("\nFont test complete. Closing automatically...")
+
+    # Short delay so CI environments don't hang waiting for input
     running = True
     clock = pygame.time.Clock()
-    
-    while running:
+    start_time = pygame.time.get_ticks()
+    timeout = 2000  # ms
+
+    while running and pygame.time.get_ticks() - start_time < timeout:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or event.type == pygame.KEYDOWN:
                 running = False

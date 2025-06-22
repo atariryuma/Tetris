@@ -4,9 +4,9 @@ A modern, feature-rich multiplayer Tetris game built with Python and Pygame, sup
 
 ## Features
 
-### 🎮 Xbox One Controller Only
-- **Xbox One controller supported**
-- **Hot-plug Support**: Connect the controller during gameplay
+### 🎮 Full Controller Support
+- **Universal gamepad support**: Xbox, PlayStation, Switch Pro and most generic controllers
+- **Hot-plug Support**: Connect controllers during gameplay
 - **Keyboard Fallback**: Full game playable with keyboard
 
 ### 🎯 Advanced Tetris Mechanics
@@ -108,14 +108,14 @@ To display the Japanese text used in the menus, install a font such as **Noto Sa
 
 ### Gamepad Controls
 
-#### Xbox One Controller Mapping
+#### Example Mappings (Xbox / PlayStation / Switch)
 - **D-Pad/Left Stick**: Move pieces and navigate menus
-- **A Button**: Rotate clockwise
-- **B Button**: Rotate counter-clockwise
-- **Y Button**: Hard drop
-- **X Button**: Hold piece
-- **Start Button**: Pause/Resume
-- **Left/Right Bumpers**: Alternative rotation controls
+- **A / × / B Button**: Rotate clockwise
+- **B / ○ / A Button**: Rotate counter-clockwise
+- **Y / △ / X Button**: Hard drop
+- **X / □ / Y Button**: Hold piece
+- **Start / Options / + Button**: Pause/Resume
+- **Left/Right Bumpers or L/R**: Alternative rotation controls
 
 ## Game Modes
 
