@@ -9,6 +9,7 @@ from typing import List, Tuple, Optional, Dict
 from enum import Enum
 from constants import *
 from input_manager import InputState, Action
+from debug_logger import get_debug_logger
 
 class RotationState(Enum):
     """Tetromino rotation states."""
@@ -138,7 +139,19 @@ class TetrisGame:
     def __init__(self, player_id: int, mode: str = PlayerMode.HUMAN):
         self.player_id = player_id
         self.mode = mode
-        self.board = TetrisBoard()
+        self.debug = get_debug_logger()
+        
+        if self.debug:
+            self.debug.log_info(f"Initializing TetrisGame for player {player_id}, mode: {mode}", f"TetrisGame.__init__")
+        
+        try:
+            self.board = TetrisBoard()
+            if self.debug:
+                self.debug.log_info(f"TetrisBoard created successfully", f"TetrisGame.__init__")
+        except Exception as e:
+            if self.debug:
+                self.debug.log_error(e, f"TetrisGame.__init__.board_creation")
+            raise
         
         # Game state
         self.score = 0
@@ -168,8 +181,17 @@ class TetrisGame:
         }
         
         # Initialize first pieces
-        self._generate_next_piece()
-        self._spawn_piece()
+        try:
+            if self.debug:
+                self.debug.log_info("Generating initial pieces", f"TetrisGame.__init__")
+            self._generate_next_piece()
+            self._spawn_piece()
+            if self.debug:
+                self.debug.log_info("Initial pieces generated successfully", f"TetrisGame.__init__")
+        except Exception as e:
+            if self.debug:
+                self.debug.log_error(e, f"TetrisGame.__init__.piece_generation")
+            raise
         
         # Statistics
         self.stats = {

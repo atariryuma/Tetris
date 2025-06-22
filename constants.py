@@ -25,7 +25,7 @@ MENU_INPUT_DELAY = 200  # Menu navigation delay
 DROP_INTERVAL_MS = 800  # Initial drop speed
 LEVEL_SPEED_MULTIPLIER = 0.9  # Speed increase per level
 MIN_DROP_INTERVAL = 50  # Fastest drop speed
-CPU_MOVE_MS = 400  # AI decision interval
+CPU_MOVE_MS = 800  # AI decision interval (increased for stability)
 
 # Visual effects
 GHOST_ALPHA = 80

@@ -1,0 +1,272 @@
+00:10:37.938 [INFO] ============================================================
+00:10:37.938 [INFO] 🎮 Tetris Debug Session Started
+00:10:37.939 [INFO] 📁 Log file: tetris_debug.log
+00:10:37.939 [INFO] 🕐 Session time: 2025-06-23 00:10:37
+00:10:37.940 [INFO] ============================================================
+00:10:37.940 [INFO] 📊 System Information:
+00:10:37.940 [INFO]    Python: 3.12.3 (tags/v3.12.3:f6650f9, Apr  9 2024, 14:05:25) [MSC v.1938 64 bit (AMD64)]
+00:10:37.941 [INFO]    Platform: win32
+00:10:38.208 [INFO]    Pygame: 2.5.2
+00:10:38.208 [INFO]    SDL: 2.28.3
+00:10:38.208 [INFO]    Available joysticks: 1
+00:10:38.209 [INFO]      Joystick 0: Xbox Series X Controller
+00:10:38.209 [INFO]        GUID: 0300509d5e040000130b000009057200
+00:10:38.210 [INFO]        Buttons: 16
+00:10:38.210 [INFO]        Axes: 6
+00:10:38.210 [INFO]        Hats: 1
+00:10:38.210 [INFO]        Power: unknown
+00:10:38.248 [INFO] ℹ️  [0.311s] main: Game starting
+00:10:38.248 [INFO] ℹ️  [0.311s] main: Initializing pygame
+00:10:38.457 [INFO] ℹ️  [0.521s] main: Creating GameManager
+00:10:38.457 [INFO] ℹ️  [0.521s] GameManager.__init__: Initializing GameManager systems
+00:10:38.458 [INFO] ℹ️  [0.522s] GamepadManager.__init__: Initializing joystick subsystem
+00:10:38.458 [INFO] ℹ️  [0.522s] GamepadManager.__init__: Scanning for controllers
+00:10:38.469 [DEBUG] 🔍 [0.532s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:38.470 [DEBUG] 🔍 [0.534s] DEBUG scan_controllers: Attempting to initialize controller 0
+00:10:38.471 [INFO] 🎮 [0.535s] CONNECTED (ID: 0) name=Xbox Series X Controller guid=0300509d5e040000130b000009057200 type=xbox buttons=16 axes=6 hats=1
+00:10:38.560 [INFO] ℹ️  [0.623s] main: Starting game loop
+00:10:38.561 [INFO] 🔌 [0.624s] JoyDeviceAdded: device_index=0
+00:10:39.478 [DEBUG] 🔍 [1.542s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:40.489 [DEBUG] 🔍 [2.552s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:40.948 [DEBUG] 🕹️  [3.012s] JoyAxisMotion: joy=0, axis=3, value=0.664
+00:10:40.982 [DEBUG] 🕹️  [3.046s] JoyAxisMotion: joy=0, axis=3, value=0.726
+00:10:41.016 [DEBUG] 🕹️  [3.079s] JoyAxisMotion: joy=0, axis=3, value=1.000
+00:10:41.134 [DEBUG] 🕹️  [3.197s] JoyAxisMotion: joy=0, axis=1, value=0.540
+00:10:41.166 [DEBUG] 🕹️  [3.229s] JoyAxisMotion: joy=0, axis=1, value=0.856
+00:10:41.200 [DEBUG] 🕹️  [3.263s] JoyAxisMotion: joy=0, axis=1, value=0.888
+00:10:41.200 [DEBUG] 🕹️  [3.263s] JoyAxisMotion: joy=0, axis=3, value=0.969
+00:10:41.231 [DEBUG] 🕹️  [3.295s] JoyAxisMotion: joy=0, axis=1, value=0.909
+00:10:41.248 [DEBUG] 🕹️  [3.311s] JoyAxisMotion: joy=0, axis=1, value=0.922
+00:10:41.248 [DEBUG] 🕹️  [3.311s] JoyAxisMotion: joy=0, axis=2, value=-0.514
+00:10:41.282 [DEBUG] 🕹️  [3.345s] JoyAxisMotion: joy=0, axis=1, value=0.931
+00:10:41.282 [DEBUG] 🕹️  [3.345s] JoyAxisMotion: joy=0, axis=2, value=-0.535
+00:10:41.315 [DEBUG] 🕹️  [3.378s] JoyAxisMotion: joy=0, axis=1, value=0.937
+00:10:41.315 [DEBUG] 🕹️  [3.378s] JoyAxisMotion: joy=0, axis=2, value=-0.542
+00:10:41.348 [DEBUG] 🕹️  [3.411s] JoyAxisMotion: joy=0, axis=1, value=0.940
+00:10:41.348 [DEBUG] 🕹️  [3.411s] JoyAxisMotion: joy=0, axis=2, value=-0.506
+00:10:41.348 [DEBUG] 🕹️  [3.411s] JoyAxisMotion: joy=0, axis=3, value=-0.526
+00:10:41.380 [DEBUG] 🕹️  [3.443s] JoyAxisMotion: joy=0, axis=1, value=0.942
+00:10:41.381 [DEBUG] 🕹️  [3.444s] JoyAxisMotion: joy=0, axis=3, value=-0.562
+00:10:41.396 [DEBUG] 🕹️  [3.459s] JoyAxisMotion: joy=0, axis=1, value=0.718
+00:10:41.396 [DEBUG] 🕹️  [3.459s] JoyAxisMotion: joy=0, axis=3, value=-0.569
+00:10:41.497 [DEBUG] 🔍 [3.560s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:41.547 [DEBUG] 🕹️  [3.610s] JoyAxisMotion: joy=0, axis=3, value=0.525
+00:10:41.580 [DEBUG] 🕹️  [3.643s] JoyAxisMotion: joy=0, axis=3, value=0.961
+00:10:41.613 [DEBUG] 🕹️  [3.676s] JoyAxisMotion: joy=0, axis=3, value=1.000
+00:10:41.759 [DEBUG] 🕹️  [3.822s] JoyAxisMotion: joy=0, axis=3, value=0.555
+00:10:42.501 [DEBUG] 🔍 [4.564s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:43.510 [DEBUG] 🔍 [5.573s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:43.856 [DEBUG] 🎞️  [5.919s] Frame 300, FPS: 0.0, State: menu
+00:10:44.517 [DEBUG] 🔍 [6.580s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:45.523 [DEBUG] 🔍 [7.586s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:45.865 [DEBUG] 🎮 [7.929s] JoyButtonDown: joy=0, button=0
+00:10:45.999 [DEBUG] 🎮 [8.062s] JoyButtonUp: joy=0, button=0
+00:10:46.081 [DEBUG] 🎮 [8.144s] JoyButtonDown: joy=0, button=0
+00:10:46.180 [DEBUG] 🎮 [8.243s] JoyButtonUp: joy=0, button=0
+00:10:46.539 [DEBUG] 🔍 [8.602s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:46.754 [DEBUG] 🎮 [8.817s] JoyButtonDown: joy=0, button=6
+00:10:46.835 [DEBUG] 🎮 [8.898s] JoyButtonUp: joy=0, button=6
+00:10:47.149 [DEBUG] 🎮 [9.212s] JoyButtonDown: joy=0, button=7
+00:10:47.314 [DEBUG] 🎮 [9.377s] JoyButtonUp: joy=0, button=7
+00:10:47.412 [DEBUG] 🎮 [9.476s] JoyButtonDown: joy=0, button=6
+00:10:47.478 [DEBUG] 🎮 [9.541s] JoyButtonDown: joy=0, button=7
+00:10:47.545 [DEBUG] 🔍 [9.608s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:47.577 [DEBUG] 🎮 [9.640s] JoyButtonUp: joy=0, button=6
+00:10:47.593 [DEBUG] 🎮 [9.656s] JoyButtonDown: joy=0, button=6
+00:10:47.593 [DEBUG] 🎮 [9.656s] JoyButtonUp: joy=0, button=7
+00:10:47.742 [DEBUG] 🎮 [9.805s] JoyButtonDown: joy=0, button=11
+00:10:47.807 [DEBUG] 🎮 [9.871s] JoyButtonDown: joy=0, button=7
+00:10:47.888 [DEBUG] 🎮 [9.951s] JoyButtonUp: joy=0, button=11
+00:10:47.905 [DEBUG] 🎮 [9.968s] JoyButtonUp: joy=0, button=6
+00:10:47.940 [DEBUG] 🎮 [10.003s] JoyButtonDown: joy=0, button=6
+00:10:47.955 [DEBUG] 🎮 [10.019s] JoyButtonUp: joy=0, button=7
+00:10:47.988 [DEBUG] 🎮 [10.051s] JoyButtonDown: joy=0, button=11
+00:10:48.071 [DEBUG] 🎮 [10.134s] JoyButtonDown: joy=0, button=7
+00:10:48.104 [DEBUG] 🎮 [10.167s] JoyButtonUp: joy=0, button=6
+00:10:48.137 [DEBUG] 🎮 [10.200s] JoyButtonUp: joy=0, button=11
+00:10:48.186 [DEBUG] 🎮 [10.249s] JoyButtonUp: joy=0, button=7
+00:10:48.218 [DEBUG] 🎮 [10.281s] JoyButtonDown: joy=0, button=11
+00:10:48.283 [DEBUG] 🎮 [10.346s] JoyButtonDown: joy=0, button=7
+00:10:48.316 [DEBUG] 🎮 [10.380s] JoyButtonUp: joy=0, button=11
+00:10:48.400 [DEBUG] 🎮 [10.463s] JoyButtonUp: joy=0, button=7
+00:10:48.400 [DEBUG] 🎮 [10.463s] JoyButtonDown: joy=0, button=11
+00:10:48.548 [DEBUG] 🔍 [10.611s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:48.681 [DEBUG] 🎮 [10.744s] JoyButtonDown: joy=0, button=7
+00:10:48.730 [DEBUG] 🎮 [10.793s] JoyButtonUp: joy=0, button=7
+00:10:48.765 [DEBUG] 🎮 [10.829s] JoyButtonUp: joy=0, button=11
+00:10:48.838 [DEBUG] 🎞️  [10.902s] Frame 600, FPS: 0.0, State: menu
+00:10:48.838 [DEBUG] 🎮 [10.902s] JoyButtonDown: joy=0, button=6
+00:10:48.871 [DEBUG] 🎮 [10.934s] JoyButtonDown: joy=0, button=3
+00:10:48.919 [DEBUG] 🎮 [10.983s] JoyButtonDown: joy=0, button=11
+00:10:49.001 [DEBUG] 🎮 [11.064s] JoyButtonUp: joy=0, button=11
+00:10:49.033 [DEBUG] 🎮 [11.096s] JoyButtonUp: joy=0, button=6
+00:10:49.067 [DEBUG] 🎮 [11.130s] JoyButtonUp: joy=0, button=3
+00:10:49.116 [DEBUG] 🎮 [11.179s] JoyButtonDown: joy=0, button=11
+00:10:49.248 [DEBUG] 🎮 [11.311s] JoyButtonUp: joy=0, button=11
+00:10:49.563 [DEBUG] 🔍 [11.626s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:49.926 [DEBUG] ⌨️  [11.990s] KeyDown: down
+00:10:50.009 [DEBUG] ⌨️  [12.072s] KeyUp: down
+00:10:50.092 [DEBUG] ⌨️  [12.155s] KeyDown: down
+00:10:50.157 [DEBUG] ⌨️  [12.220s] KeyUp: down
+00:10:50.240 [DEBUG] ⌨️  [12.303s] KeyDown: down
+00:10:50.319 [DEBUG] ⌨️  [12.382s] KeyUp: down
+00:10:50.368 [DEBUG] ⌨️  [12.431s] KeyDown: down
+00:10:50.451 [DEBUG] ⌨️  [12.514s] KeyUp: down
+00:10:50.563 [DEBUG] 🔍 [12.627s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:50.841 [DEBUG] ⌨️  [12.904s] KeyDown: up
+00:10:50.905 [DEBUG] ⌨️  [12.969s] KeyUp: up
+00:10:51.412 [DEBUG] ⌨️  [13.475s] KeyDown: up
+00:10:51.529 [DEBUG] ⌨️  [13.592s] KeyUp: up
+00:10:51.576 [DEBUG] 🔍 [13.639s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:51.935 [DEBUG] ⌨️  [13.998s] KeyDown: up
+00:10:52.000 [DEBUG] ⌨️  [14.063s] KeyUp: up
+00:10:52.580 [DEBUG] 🔍 [14.643s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:52.891 [DEBUG] ⌨️  [14.955s] KeyDown: right
+00:10:52.992 [DEBUG] ⌨️  [15.055s] KeyUp: right
+00:10:53.593 [DEBUG] 🔍 [15.656s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:53.754 [DEBUG] 🎞️  [15.817s] Frame 900, FPS: 0.0, State: menu
+00:10:53.951 [DEBUG] ⌨️  [16.014s] KeyDown: down
+00:10:54.050 [DEBUG] ⌨️  [16.113s] KeyUp: down
+00:10:54.228 [DEBUG] ⌨️  [16.291s] KeyDown: down
+00:10:54.326 [DEBUG] ⌨️  [16.389s] KeyUp: down
+00:10:54.606 [DEBUG] 🔍 [16.669s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:55.147 [DEBUG] ⌨️  [17.210s] KeyDown: return
+00:10:55.147 [INFO] ℹ️  [17.210s] start_game: Creating TetrisGame for player 1, mode: human
+00:10:55.147 [INFO] ℹ️  [17.210s] TetrisGame.__init__: Initializing TetrisGame for player 1, mode: human
+00:10:55.148 [INFO] ℹ️  [17.211s] TetrisGame.__init__: TetrisBoard created successfully
+00:10:55.148 [INFO] ℹ️  [17.211s] TetrisGame.__init__: Generating initial pieces
+00:10:55.148 [INFO] ℹ️  [17.211s] TetrisGame.__init__: Initial pieces generated successfully
+00:10:55.148 [INFO] ℹ️  [17.211s] start_game: TetrisGame created successfully for player 1
+00:10:55.148 [INFO] ℹ️  [17.211s] start_game: Creating TetrisGame for player 2, mode: off
+00:10:55.148 [INFO] ℹ️  [17.211s] TetrisGame.__init__: Initializing TetrisGame for player 2, mode: off
+00:10:55.148 [INFO] ℹ️  [17.211s] TetrisGame.__init__: TetrisBoard created successfully
+00:10:55.148 [INFO] ℹ️  [17.211s] TetrisGame.__init__: Generating initial pieces
+00:10:55.149 [INFO] ℹ️  [17.213s] TetrisGame.__init__: Initial pieces generated successfully
+00:10:55.149 [INFO] ℹ️  [17.213s] start_game: TetrisGame created successfully for player 2
+00:10:55.149 [INFO] ℹ️  [17.213s] start_game: Creating TetrisGame for player 3, mode: off
+00:10:55.149 [INFO] ℹ️  [17.213s] TetrisGame.__init__: Initializing TetrisGame for player 3, mode: off
+00:10:55.149 [INFO] ℹ️  [17.213s] TetrisGame.__init__: TetrisBoard created successfully
+00:10:55.149 [INFO] ℹ️  [17.213s] TetrisGame.__init__: Generating initial pieces
+00:10:55.150 [INFO] ℹ️  [17.213s] TetrisGame.__init__: Initial pieces generated successfully
+00:10:55.150 [INFO] ℹ️  [17.214s] start_game: TetrisGame created successfully for player 3
+00:10:55.423 [DEBUG] ⌨️  [17.487s] KeyUp: return
+00:10:55.621 [DEBUG] 🔍 [17.684s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:56.622 [DEBUG] 🔍 [18.685s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:57.630 [DEBUG] 🔍 [19.693s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:58.640 [DEBUG] 🔍 [20.703s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:10:58.939 [DEBUG] 🎞️  [21.003s] Frame 1200, FPS: 0.0, State: game_over
+00:10:59.421 [DEBUG] ⌨️  [21.485s] KeyDown: return
+00:10:59.503 [DEBUG] ⌨️  [21.566s] KeyUp: return
+00:10:59.652 [DEBUG] 🔍 [21.715s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:00.001 [DEBUG] ⌨️  [22.064s] KeyDown: up
+00:11:00.116 [DEBUG] ⌨️  [22.179s] KeyUp: up
+00:11:00.608 [DEBUG] ⌨️  [22.671s] KeyDown: return
+00:11:00.657 [DEBUG] 🔍 [22.720s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:00.691 [DEBUG] ⌨️  [22.754s] KeyUp: return
+00:11:00.806 [DEBUG] ⌨️  [22.869s] KeyDown: return
+00:11:00.890 [DEBUG] ⌨️  [22.953s] KeyUp: return
+00:11:01.662 [DEBUG] 🔍 [23.725s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:02.668 [DEBUG] 🔍 [24.731s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:03.668 [DEBUG] 🔍 [25.731s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:03.883 [DEBUG] 🎞️  [25.946s] Frame 1500, FPS: 0.0, State: game_over
+00:11:04.678 [DEBUG] 🔍 [26.741s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:05.046 [DEBUG] ⌨️  [27.109s] KeyDown: r
+00:11:05.046 [INFO] ℹ️  [27.109s] start_game: Creating TetrisGame for player 1, mode: human
+00:11:05.046 [INFO] ℹ️  [27.109s] TetrisGame.__init__: Initializing TetrisGame for player 1, mode: human
+00:11:05.046 [INFO] ℹ️  [27.109s] TetrisGame.__init__: TetrisBoard created successfully
+00:11:05.047 [INFO] ℹ️  [27.110s] TetrisGame.__init__: Generating initial pieces
+00:11:05.047 [INFO] ℹ️  [27.110s] TetrisGame.__init__: Initial pieces generated successfully
+00:11:05.047 [INFO] ℹ️  [27.110s] start_game: TetrisGame created successfully for player 1
+00:11:05.047 [INFO] ℹ️  [27.110s] start_game: Creating TetrisGame for player 2, mode: off
+00:11:05.047 [INFO] ℹ️  [27.110s] TetrisGame.__init__: Initializing TetrisGame for player 2, mode: off
+00:11:05.047 [INFO] ℹ️  [27.110s] TetrisGame.__init__: TetrisBoard created successfully
+00:11:05.048 [INFO] ℹ️  [27.111s] TetrisGame.__init__: Generating initial pieces
+00:11:05.048 [INFO] ℹ️  [27.111s] TetrisGame.__init__: Initial pieces generated successfully
+00:11:05.048 [INFO] ℹ️  [27.111s] start_game: TetrisGame created successfully for player 2
+00:11:05.048 [INFO] ℹ️  [27.111s] start_game: Creating TetrisGame for player 3, mode: off
+00:11:05.048 [INFO] ℹ️  [27.111s] TetrisGame.__init__: Initializing TetrisGame for player 3, mode: off
+00:11:05.048 [INFO] ℹ️  [27.111s] TetrisGame.__init__: TetrisBoard created successfully
+00:11:05.049 [INFO] ℹ️  [27.112s] TetrisGame.__init__: Generating initial pieces
+00:11:05.049 [INFO] ℹ️  [27.112s] TetrisGame.__init__: Initial pieces generated successfully
+00:11:05.049 [INFO] ℹ️  [27.112s] start_game: TetrisGame created successfully for player 3
+00:11:05.148 [DEBUG] ⌨️  [27.211s] KeyUp: r
+00:11:05.679 [DEBUG] 🔍 [27.743s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:06.693 [DEBUG] 🔍 [28.756s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:07.706 [DEBUG] 🔍 [29.769s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:08.719 [DEBUG] 🔍 [30.782s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:08.818 [DEBUG] 🎞️  [30.881s] Frame 1800, FPS: 0.0, State: game_over
+00:11:08.818 [INFO] ℹ️  [30.881s] periodic_status: Status: frame 1800, state: game_over, FPS: 0.0, controllers: 1
+00:11:09.242 [DEBUG] ⌨️  [31.305s] KeyDown: escape
+00:11:09.325 [DEBUG] ⌨️  [31.388s] KeyUp: escape
+00:11:09.721 [DEBUG] 🔍 [31.785s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:10.196 [DEBUG] ⌨️  [32.259s] KeyDown: up
+00:11:10.293 [DEBUG] ⌨️  [32.357s] KeyUp: up
+00:11:10.656 [DEBUG] ⌨️  [32.720s] KeyDown: up
+00:11:10.721 [DEBUG] 🔍 [32.785s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:10.771 [DEBUG] ⌨️  [32.835s] KeyUp: up
+00:11:11.727 [DEBUG] 🔍 [33.790s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:12.213 [DEBUG] ⌨️  [34.276s] KeyDown: right
+00:11:12.296 [DEBUG] ⌨️  [34.359s] KeyUp: right
+00:11:12.741 [DEBUG] 🔍 [34.805s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:13.746 [DEBUG] 🎞️  [35.809s] Frame 2100, FPS: 0.0, State: menu
+00:11:13.746 [DEBUG] 🔍 [35.809s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:14.478 [DEBUG] ⌨️  [36.541s] KeyDown: down
+00:11:14.543 [DEBUG] ⌨️  [36.607s] KeyUp: down
+00:11:14.658 [DEBUG] ⌨️  [36.721s] KeyDown: down
+00:11:14.757 [DEBUG] ⌨️  [36.820s] KeyUp: down
+00:11:14.757 [DEBUG] 🔍 [36.820s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:15.528 [DEBUG] ⌨️  [37.591s] KeyDown: return
+00:11:15.528 [INFO] ℹ️  [37.591s] start_game: Creating TetrisGame for player 1, mode: human
+00:11:15.528 [INFO] ℹ️  [37.591s] TetrisGame.__init__: Initializing TetrisGame for player 1, mode: human
+00:11:15.528 [INFO] ℹ️  [37.591s] TetrisGame.__init__: TetrisBoard created successfully
+00:11:15.528 [INFO] ℹ️  [37.591s] TetrisGame.__init__: Generating initial pieces
+00:11:15.529 [INFO] ℹ️  [37.593s] TetrisGame.__init__: Initial pieces generated successfully
+00:11:15.529 [INFO] ℹ️  [37.593s] start_game: TetrisGame created successfully for player 1
+00:11:15.529 [INFO] ℹ️  [37.593s] start_game: Creating TetrisGame for player 2, mode: human
+00:11:15.529 [INFO] ℹ️  [37.593s] TetrisGame.__init__: Initializing TetrisGame for player 2, mode: human
+00:11:15.529 [INFO] ℹ️  [37.593s] TetrisGame.__init__: TetrisBoard created successfully
+00:11:15.529 [INFO] ℹ️  [37.593s] TetrisGame.__init__: Generating initial pieces
+00:11:15.530 [INFO] ℹ️  [37.594s] TetrisGame.__init__: Initial pieces generated successfully
+00:11:15.530 [INFO] ℹ️  [37.594s] start_game: TetrisGame created successfully for player 2
+00:11:15.530 [INFO] ℹ️  [37.594s] start_game: Creating TetrisGame for player 3, mode: off
+00:11:15.530 [INFO] ℹ️  [37.594s] TetrisGame.__init__: Initializing TetrisGame for player 3, mode: off
+00:11:15.530 [INFO] ℹ️  [37.594s] TetrisGame.__init__: TetrisBoard created successfully
+00:11:15.530 [INFO] ℹ️  [37.594s] TetrisGame.__init__: Generating initial pieces
+00:11:15.531 [INFO] ℹ️  [37.595s] TetrisGame.__init__: Initial pieces generated successfully
+00:11:15.531 [INFO] ℹ️  [37.595s] start_game: TetrisGame created successfully for player 3
+00:11:15.629 [DEBUG] ⌨️  [37.692s] KeyUp: return
+00:11:15.761 [DEBUG] 🔍 [37.824s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:16.762 [DEBUG] 🔍 [38.825s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:17.355 [DEBUG] ⌨️  [39.418s] KeyDown: left
+00:11:17.472 [DEBUG] ⌨️  [39.535s] KeyUp: left
+00:11:17.769 [DEBUG] 🔍 [39.833s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:18.428 [DEBUG] ⌨️  [40.491s] KeyDown: left
+00:11:18.528 [DEBUG] ⌨️  [40.591s] KeyUp: left
+00:11:18.674 [DEBUG] 🎞️  [40.737s] Frame 2400, FPS: 0.0, State: playing
+00:11:18.772 [DEBUG] 🔍 [40.835s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:19.777 [DEBUG] 🔍 [41.840s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:20.079 [DEBUG] 🕹️  [42.142s] JoyAxisMotion: joy=0, axis=0, value=-0.611
+00:11:20.095 [DEBUG] 🕹️  [42.159s] JoyAxisMotion: joy=0, axis=0, value=-0.672
+00:11:20.130 [DEBUG] 🕹️  [42.193s] JoyAxisMotion: joy=0, axis=0, value=-0.894
+00:11:20.163 [DEBUG] 🕹️  [42.226s] JoyAxisMotion: joy=0, axis=0, value=-1.000
+00:11:20.412 [DEBUG] 🕹️  [42.475s] JoyAxisMotion: joy=0, axis=0, value=-0.992
+00:11:20.789 [DEBUG] 🔍 [42.853s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:21.251 [DEBUG] 🎮 [43.314s] JoyButtonDown: joy=0, button=1
+00:11:21.515 [DEBUG] 🎮 [43.578s] JoyButtonUp: joy=0, button=1
+00:11:21.795 [DEBUG] 🔍 [43.858s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:22.700 [DEBUG] 🎮 [44.763s] JoyButtonDown: joy=0, button=1
+00:11:22.798 [DEBUG] 🔍 [44.861s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:22.946 [DEBUG] 🎮 [45.009s] JoyButtonUp: joy=0, button=1
+00:11:23.623 [DEBUG] 🎞️  [45.687s] Frame 2700, FPS: 0.0, State: playing
+00:11:23.689 [DEBUG] 🕹️  [45.753s] JoyAxisMotion: joy=0, axis=0, value=-0.769
+00:11:23.721 [DEBUG] 🕹️  [45.785s] JoyAxisMotion: joy=0, axis=0, value=-1.000
+00:11:23.802 [DEBUG] 🔍 [45.865s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:24.135 [DEBUG] 🕹️  [46.199s] JoyAxisMotion: joy=0, axis=0, value=-0.984
+00:11:24.497 [DEBUG] 🎮 [46.560s] JoyButtonDown: joy=0, button=0
+00:11:24.762 [DEBUG] 🎮 [46.825s] JoyButtonUp: joy=0, button=0
+00:11:24.812 [DEBUG] 🔍 [46.875s] DEBUG scan_controllers: Scanning controllers: 1 detected
+00:11:25.012 [DEBUG] 🎮 [47.075s] JoyButtonDown: joy=0, button=1
+00:11:25.242 [DEBUG] 🎮 [47.305s] JoyButtonUp: joy=0, button=1
+00:11:25.424 [DEBUG] 🎮 [47.487s] JoyButtonDown: joy=0, button=3
+00:11:25.622 [DEBUG] 🎮 [47.685s] JoyButtonUp: joy=0, button=3
+00:11:25.769 [DEBUG] 🎮 [47.833s] JoyButtonDown: joy=0, button=2

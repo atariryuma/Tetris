@@ -9,14 +9,20 @@ from constants import WINDOW_WIDTH, WINDOW_HEIGHT, VSYNC
 from game_manager import GameManager
 from font_manager import cleanup_fonts
 from utils import safe_events  # safe event getter
+from debug_logger import init_debug_logger, close_debug_logger
 
 def main():
     """Initialize and run the Tetris game."""
     print("=== 三人対戦テトリス NEO - Python Edition ===")
     print("Initializing game systems...")
 
+    # Initialize debug logger
+    debug = init_debug_logger("tetris_debug.log")
+    debug.log_info("Game starting", "main")
+
     # Initialize pygame if not already
     if not pygame.get_init():
+        debug.log_info("Initializing pygame", "main")
         pygame.init()
 
     # Attempt to create display
@@ -60,8 +66,9 @@ def main():
     print("- F1: Show volume info")
     print("- F2/F3: Adjust master volume")
     print("\nGamepad support:")
-    print("- Works with Xbox, PlayStation, Switch Pro and most generic controllers")
-    print("- Plug in controllers before or during play")
+    print("- Xbox controllers only (Series X/S, One, 360)")
+    print("- Plug in controller before starting the game")
+    print("- Button layout: A=Rotate Right, X=Rotate Left, Y/LB=Hard Drop, B=Hold")
 
     # BGM安全読み込み
     bgm_path = os.path.join(os.path.dirname(__file__), 'assets', 'sounds', 'menu_music.ogg')
@@ -76,16 +83,22 @@ def main():
 
     try:
         # ゲーム開始
+        debug.log_info("Creating GameManager", "main")
         gm = GameManager(screen, event_source=safe_events)
+        debug.log_info("Starting game loop", "main")
         gm.run()
     except KeyboardInterrupt:
         print("\nGame interrupted by user")
+        debug.log_info("Game interrupted by user", "main")
     except Exception as e:
         print(f"\nUnexpected error: {e}")
+        debug.log_error(e, "main.game_loop")
         import traceback; traceback.print_exc()
     finally:
+        debug.log_info("Cleaning up", "main")
         cleanup_fonts()
         pygame.quit()
+        close_debug_logger()
         print("Game shutdown complete")
 
     return 0

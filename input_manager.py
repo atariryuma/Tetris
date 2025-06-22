@@ -7,6 +7,7 @@ import time
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 from constants import INPUT_INTERVAL_MS, ANALOG_DEAD_ZONE, DEBUG_CONTROLLERS
+from debug_logger import get_debug_logger
 
 class Action(Enum):
     """Game actions that can be mapped to inputs."""
@@ -37,90 +38,25 @@ class UniversalGamepadMapper:
     """Maps different controller types to a universal button layout."""
     
     def __init__(self):
-        self.controller_mappings = {
-            # Xbox One Controller mapping
-            'xbox': {
-                'buttons': {
-                    0: Action.ROTATE_CW,      # A
-                    1: Action.ROTATE_CCW,     # B
-                    2: Action.HOLD,           # X
-                    3: Action.HARD_DROP,      # Y
-                    4: Action.ROTATE_CCW,     # LB
-                    5: Action.ROTATE_CW,      # RB
-                    6: Action.MENU_BACK,      # Back/Select
-                    7: Action.PAUSE,          # Start
-                    11: Action.MENU_UP,       # D-pad Up
-                    12: Action.MENU_DOWN,     # D-pad Down
-                    13: Action.MENU_LEFT,     # D-pad Left
-                    14: Action.MENU_RIGHT,    # D-pad Right
-                },
-                'axes': {
-                    0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),  # Left stick X
-                    1: (Action.MENU_UP, Action.SOFT_DROP),     # Left stick Y
-                }
+        # Xbox Controller mapping only (simplified for stability)
+        self.xbox_mapping = {
+            'buttons': {
+                0: Action.ROTATE_CW,      # A - 右回転
+                1: Action.HOLD,           # B - ホールド
+                2: Action.ROTATE_CCW,     # X - 左回転
+                3: Action.HARD_DROP,      # Y - ハードドロップ
+                4: Action.HARD_DROP,      # LB - ハードドロップ（代替）
+                5: Action.ROTATE_CW,      # RB - 右回転（代替）
+                6: Action.MENU_BACK,      # Back/Select
+                7: Action.PAUSE,          # Start
+                11: Action.MENU_UP,       # D-pad Up
+                12: Action.MENU_DOWN,     # D-pad Down  
+                13: Action.MENU_LEFT,     # D-pad Left
+                14: Action.MENU_RIGHT,    # D-pad Right
             },
-            # PlayStation DualShock/DualSense mapping
-            'playstation': {
-                'buttons': {
-                    0: Action.HOLD,          # Square
-                    1: Action.ROTATE_CW,     # Cross
-                    2: Action.ROTATE_CCW,    # Circle
-                    3: Action.HARD_DROP,     # Triangle
-                    4: Action.ROTATE_CCW,    # L1
-                    5: Action.ROTATE_CW,     # R1
-                    8: Action.MENU_BACK,     # Share
-                    9: Action.PAUSE,         # Options
-                    11: Action.MENU_UP,      # D-pad Up
-                    12: Action.MENU_DOWN,    # D-pad Down
-                    13: Action.MENU_LEFT,    # D-pad Left
-                    14: Action.MENU_RIGHT,   # D-pad Right
-                },
-                'axes': {
-                    0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),  # Left stick X
-                    1: (Action.MENU_UP, Action.SOFT_DROP),     # Left stick Y
-                }
-            },
-            # Nintendo Switch Pro Controller mapping
-            'switch': {
-                'buttons': {
-                    0: Action.ROTATE_CW,      # B
-                    1: Action.ROTATE_CCW,     # A
-                    2: Action.HOLD,           # Y
-                    3: Action.HARD_DROP,      # X
-                    4: Action.ROTATE_CCW,     # L
-                    5: Action.ROTATE_CW,      # R
-                    8: Action.MENU_BACK,      # -
-                    9: Action.PAUSE,          # +
-                    10: Action.MENU_UP,       # D-pad Up
-                    11: Action.MENU_DOWN,     # D-pad Down
-                    12: Action.MENU_LEFT,     # D-pad Left
-                    13: Action.MENU_RIGHT,    # D-pad Right
-                },
-                'axes': {
-                    0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),
-                    1: (Action.MENU_UP, Action.SOFT_DROP),
-                }
-            },
-            # Generic controllers fall back to Xbox layout
-            'generic': {
-                'buttons': {
-                    0: Action.ROTATE_CW,
-                    1: Action.ROTATE_CCW,
-                    2: Action.HOLD,
-                    3: Action.HARD_DROP,
-                    4: Action.ROTATE_CCW,
-                    5: Action.ROTATE_CW,
-                    6: Action.MENU_BACK,
-                    7: Action.PAUSE,
-                    11: Action.MENU_UP,
-                    12: Action.MENU_DOWN,
-                    13: Action.MENU_LEFT,
-                    14: Action.MENU_RIGHT,
-                },
-                'axes': {
-                    0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),
-                    1: (Action.MENU_UP, Action.SOFT_DROP),
-                }
+            'axes': {
+                0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),  # Left stick X
+                1: (Action.MENU_UP, Action.SOFT_DROP),     # Left stick Y
             }
         }
         
@@ -157,21 +93,16 @@ class UniversalGamepadMapper:
         }
 
     def detect_controller_type(self, joystick_name: str) -> str:
-        """Detect controller type from joystick name."""
+        """Detect if controller is Xbox (only Xbox supported)."""
         name_lower = joystick_name.lower()
-
         if any(keyword in name_lower for keyword in ['xbox', '045e', 'microsoft']):
             return 'xbox'
-        elif any(keyword in name_lower for keyword in ['playstation', 'dualshock', 'dualsense', 'sony']):
-            return 'playstation'
-        elif any(keyword in name_lower for keyword in ['switch', 'nintendo']):
-            return 'switch'
         else:
-            return 'generic'
+            return 'xbox'  # Force Xbox mapping for all controllers
 
-    def get_mapping(self, controller_type: str) -> Dict:
-        """Get button/axis mapping for controller type."""
-        return self.controller_mappings.get(controller_type, {'buttons': {}, 'axes': {}})
+    def get_mapping(self) -> Dict:
+        """Get Xbox button/axis mapping."""
+        return self.xbox_mapping
 
 class GamepadManager:
     """Manages gamepad detection, assignment, and input processing."""
@@ -184,13 +115,22 @@ class GamepadManager:
         self.input_states: Dict[int, InputState] = {}
         self.last_scan_time = 0
         self.scan_interval = 1.0  # Scan for new controllers every second
+        self.debug = get_debug_logger()
         
         # Initialize pygame joystick module
         try:
+            if self.debug:
+                self.debug.log_info("Initializing joystick subsystem", "GamepadManager.__init__")
             pygame.joystick.init()
+            
+            if self.debug:
+                self.debug.log_info("Scanning for controllers", "GamepadManager.__init__")
             self.scan_controllers()
+            
         except (pygame.error, SystemError, OSError) as e:
-            if DEBUG_CONTROLLERS:
+            if self.debug:
+                self.debug.log_error(e, "GamepadManager.__init__")
+            elif DEBUG_CONTROLLERS:
                 print(f"Joystick initialization failed: {e}")
             # Continue without gamepad support
 
@@ -199,8 +139,9 @@ class GamepadManager:
         # Pump the event queue to keep SDL responsive
         try:
             pygame.event.pump()
-        except Exception:
-            pass
+        except Exception as e:
+            if self.debug:
+                self.debug.log_warning(f"pygame.event.pump() failed: {e}", "scan_controllers")
 
         current_time = time.time()
         if current_time - self.last_scan_time < self.scan_interval:
@@ -208,35 +149,76 @@ class GamepadManager:
             
         self.last_scan_time = current_time
         
-        # Remove disconnected joysticks
-        connected_ids = set(range(pygame.joystick.get_count()))
-        for joystick_id in list(self.joysticks.keys()):
-            if joystick_id not in connected_ids:
-                if DEBUG_CONTROLLERS:
-                    print(f"Controller {joystick_id} disconnected")
-                del self.joysticks[joystick_id]
-                if joystick_id in self.assignment_table:
-                    player_id = self.assignment_table[joystick_id]
-                    del self.player_assignments[player_id]
-                    del self.assignment_table[joystick_id]
-        
-        # Add new joysticks
         try:
+            # Check current controller count
             controller_count = pygame.joystick.get_count()
+            if self.debug:
+                self.debug.log_debug(f"Scanning controllers: {controller_count} detected", "scan_controllers")
+            
+            # Remove disconnected joysticks
+            connected_ids = set(range(controller_count))
+            for joystick_id in list(self.joysticks.keys()):
+                if joystick_id not in connected_ids:
+                    joystick = self.joysticks[joystick_id]
+                    if self.debug:
+                        self.debug.log_controller_event("DISCONNECTED", joystick_id, 
+                                                      {"name": joystick.get_name()})
+                    
+                    # Safely quit joystick
+                    try:
+                        joystick.quit()
+                    except Exception as e:
+                        if self.debug:
+                            self.debug.log_warning(f"Failed to quit joystick {joystick_id}: {e}", "scan_controllers")
+                    
+                    del self.joysticks[joystick_id]
+                    if joystick_id in self.assignment_table:
+                        player_id = self.assignment_table[joystick_id]
+                        del self.player_assignments[player_id]
+                        del self.assignment_table[joystick_id]
+            
+            # Add new joysticks
             for i in range(controller_count):
                 if i not in self.joysticks:
                     try:
+                        if self.debug:
+                            self.debug.log_debug(f"Attempting to initialize controller {i}", "scan_controllers")
+                        
                         joystick = pygame.joystick.Joystick(i)
                         joystick.init()
-                        ctype = self.mapper.detect_controller_type(joystick.get_name())
+                        
+                        # Get controller info
+                        name = joystick.get_name()
+                        guid = joystick.get_guid()
+                        buttons = joystick.get_numbuttons()
+                        axes = joystick.get_numaxes()
+                        hats = joystick.get_numhats()
+                        
+                        ctype = self.mapper.detect_controller_type(name)
                         self.joysticks[i] = joystick
-                        if DEBUG_CONTROLLERS:
-                            print(f"Controller {i} connected: {joystick.get_name()} [{ctype}]")
+                        
+                        if self.debug:
+                            self.debug.log_controller_event("CONNECTED", i, {
+                                "name": name,
+                                "guid": guid,
+                                "type": ctype,
+                                "buttons": buttons,
+                                "axes": axes,
+                                "hats": hats
+                            })
+                        elif DEBUG_CONTROLLERS:
+                            print(f"Controller {i} connected: {name} [{ctype}]")
+                            
                     except (pygame.error, SystemError, OSError) as e:
-                        if DEBUG_CONTROLLERS:
+                        if self.debug:
+                            self.debug.log_error(e, f"scan_controllers.init_controller_{i}")
+                        elif DEBUG_CONTROLLERS:
                             print(f"Failed to initialize controller {i}: {e}")
+                        
         except (pygame.error, SystemError, OSError) as e:
-            if DEBUG_CONTROLLERS:
+            if self.debug:
+                self.debug.log_error(e, "scan_controllers.get_count")
+            elif DEBUG_CONTROLLERS:
                 print(f"Failed to get controller count: {e}")
 
     def assign_controller(self, player_id: int, joystick_id: int) -> bool:
@@ -297,7 +279,7 @@ class GamepadManager:
                 input_state = self.get_input_state(player_id)
                 
                 controller_type = self.mapper.detect_controller_type(joystick.get_name())
-                mapping = self.mapper.get_mapping(controller_type)
+                mapping = self.mapper.get_mapping()  # Xbox only
                 
                 try:
                     # Process buttons
@@ -306,8 +288,10 @@ class GamepadManager:
                             if button_id < joystick.get_numbuttons():
                                 pressed = joystick.get_button(button_id)
                                 self._update_action_state(input_state, action, pressed, current_time)
-                        except (pygame.error, SystemError, OSError):
-                            # Skip this button if it fails
+                        except (pygame.error, SystemError, OSError) as e:
+                            if self.debug:
+                                self.debug.log_warning(f"Button {button_id} read failed: {e}", 
+                                                     f"controller_{joystick_id}")
                             continue
                     
                     # Process axes
@@ -327,19 +311,31 @@ class GamepadManager:
                                 # Process positive direction
                                 pressed = axis_value > ANALOG_DEAD_ZONE
                                 self._update_action_state(input_state, pos_action, pressed, current_time)
-                        except (pygame.error, SystemError, OSError):
-                            # Skip this axis if it fails
+                        except (pygame.error, SystemError, OSError) as e:
+                            if self.debug:
+                                self.debug.log_warning(f"Axis {axis_id} read failed: {e}", 
+                                                     f"controller_{joystick_id}")
                             continue
                 except (pygame.error, SystemError, OSError) as e:
-                    if DEBUG_CONTROLLERS:
+                    if self.debug:
+                        self.debug.log_error(e, f"controller_{joystick_id}_processing")
+                        self.debug.log_info(f"Removing problematic controller {joystick_id}", 
+                                          "controller_cleanup")
+                    elif DEBUG_CONTROLLERS:
                         print(f"Error processing controller {joystick_id}: {e}")
+                    
                     # Remove this controller from active list
-                    if joystick_id in self.joysticks:
-                        del self.joysticks[joystick_id]
-                    if joystick_id in self.assignment_table:
-                        player_id = self.assignment_table[joystick_id]
-                        del self.player_assignments[player_id]
-                        del self.assignment_table[joystick_id]
+                    try:
+                        if joystick_id in self.joysticks:
+                            self.joysticks[joystick_id].quit()
+                            del self.joysticks[joystick_id]
+                        if joystick_id in self.assignment_table:
+                            player_id = self.assignment_table[joystick_id]
+                            del self.player_assignments[player_id]
+                            del self.assignment_table[joystick_id]
+                    except Exception as cleanup_error:
+                        if self.debug:
+                            self.debug.log_error(cleanup_error, f"controller_{joystick_id}_cleanup")
         
         # Update keyboard inputs for players without controllers
         for player_id in range(1, 4):

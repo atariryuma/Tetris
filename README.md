@@ -4,9 +4,10 @@ A modern, feature-rich multiplayer Tetris game built with Python and Pygame, sup
 
 ## Features
 
-### 🎮 Full Controller Support
-- **Universal gamepad support**: Xbox, PlayStation, Switch Pro and most generic controllers
-- **Hot-plug Support**: Connect controllers during gameplay
+### 🎮 Xbox Controller Support
+- **Xbox controllers only**: Xbox Series X/S, Xbox One, Xbox 360
+- **Bluetooth support**: Wireless Xbox controllers
+- **Debug logging**: Comprehensive logging for troubleshooting controller issues
 - **Keyboard Fallback**: Full game playable with keyboard
 
 ### 🎯 Advanced Tetris Mechanics
@@ -54,6 +55,9 @@ uv sync
 
 # Run the game
 uv run python main.py
+
+# Debug controller issues (if needed)
+uv run python test_bluetooth_debug.py
 ```
 
 ### Alternative Setup with pip

@@ -11,6 +11,7 @@ from input_manager import GamepadManager, UINavigationManager, Action
 from audio_manager import AudioManager
 from ui_renderer import UIRenderer
 from cpu_ai import AdaptiveCPU
+from debug_logger import get_debug_logger
 
 # safe_events は main.py 経由でなく utils から直接読み込む
 # ただしここでは event_source 経由で呼び出すため、utils をインポート不要
@@ -23,11 +24,15 @@ class GameManager:
         self.clock = pygame.time.Clock()
         self.running = False  # Will be set to True in run()
         self.state = GameState.MENU
+        self.debug = get_debug_logger()
         
         # Use provided event_source or fall back to pygame.event.get
         self.event_source = event_source or pygame.event.get
         
         # Initialize systems
+        if self.debug:
+            self.debug.log_info("Initializing GameManager systems", "GameManager.__init__")
+        
         self.gamepad_manager = GamepadManager()
         self.ui_navigation = UINavigationManager(self.gamepad_manager)
         self.audio_manager = AudioManager()
@@ -64,13 +69,24 @@ class GameManager:
         frame_count = 0
         last_update_time = time.time()
         
+        game_start_time = time.time()
+        max_hang_time = 5.0  # Maximum time between frames before considering hung
+        last_frame_time = time.time()
+        
         while self.running:
             current_time = time.time()
             delta_time = current_time - self.last_time
             self.last_time = current_time
             
-            # Safety check for hung loops
-            if current_time - last_update_time > 5.0:  # 5 second timeout
+            # Emergency hang detection (force quit if frames take too long)
+            time_since_last_frame = current_time - last_frame_time
+            if time_since_last_frame > max_hang_time:
+                print(f"[ERROR] Game appears hung (no frame for {time_since_last_frame:.1f}s), force quitting...")
+                self.running = False
+                break
+            
+            # Safety check for hung loops (reduced frequency)
+            if current_time - last_update_time > 10.0:  # 10 second timeout
                 print("[WARN] Game loop may be hanging - continuing...")
                 last_update_time = current_time
             
@@ -99,8 +115,19 @@ class GameManager:
                 time.sleep(1.0 / FPS)  # Fallback timing
             
             frame_count += 1
-            if frame_count % 300 == 0:  # Every 5 seconds at 60 FPS
-                print(f"Game running: frame {frame_count}, state: {self.state}")
+            last_frame_time = time.time()  # Update frame completion time
+            
+            # Log frame info to debug
+            if self.debug:
+                fps = self.clock.get_fps() if hasattr(self, 'clock') else 0
+                self.debug.log_frame_info(frame_count, fps, self.state.value if hasattr(self.state, 'value') else str(self.state))
+            
+            if frame_count % 1800 == 0:  # Every 30 seconds at 60 FPS
+                fps = self.clock.get_fps() if hasattr(self, 'clock') else 0
+                print(f"Game running: frame {frame_count}, state: {self.state}, FPS: {fps:.1f}")
+                if self.debug:
+                    controller_count = len(self.gamepad_manager.joysticks)
+                    self.debug.log_info(f"Status: frame {frame_count}, state: {self.state}, FPS: {fps:.1f}, controllers: {controller_count}", "periodic_status")
         
         # Cleanup
         print("Game ending, cleaning up...")
@@ -115,11 +142,18 @@ class GameManager:
         """Process all pending pygame events safely."""
         try:
             events = self.event_source()
-        except Exception:
+        except Exception as e:
+            if self.debug:
+                self.debug.log_error(e, "handle_events.event_source")
             events = []
 
         for event in events:
+            if self.debug:
+                self.debug.log_pygame_event(event)
+            
             if event.type == pygame.QUIT:
+                if self.debug:
+                    self.debug.log_info("QUIT event received", "handle_events")
                 self.running = False
             else:
                 self.handle_event(event)
@@ -252,18 +286,24 @@ class GameManager:
                 events = game.update(input_state, delta_time)
                 
             elif game.mode == PlayerMode.CPU:
-                # CPU player
+                # CPU player (optimized for performance)
+                input_state = self.gamepad_manager.get_input_state(player_id)
+                
                 if player_id in self.cpu_controllers:
                     cpu = self.cpu_controllers[player_id]
                     current_time = time.time() * 1000
-                    action = cpu.update(game, current_time)
                     
-                    # Convert CPU action to input state
-                    input_state = self.gamepad_manager.get_input_state(player_id)
+                    # Limit CPU processing frequency to prevent lag
+                    if not hasattr(cpu, '_last_think_time'):
+                        cpu._last_think_time = 0
                     
-                    # Simulate input based on CPU decision
-                    if action:
-                        self.simulate_cpu_input(input_state, action)
+                    if current_time - cpu._last_think_time > CPU_MOVE_MS:
+                        action = cpu.update(game, current_time)
+                        cpu._last_think_time = current_time
+                        
+                        # Simulate input based on CPU decision
+                        if action:
+                            self.simulate_cpu_input(input_state, action)
                 
                 # Update game
                 events = game.update(input_state, delta_time)
@@ -391,15 +431,42 @@ class GameManager:
         
         for i, mode in enumerate(self.player_modes):
             player_id = i + 1
-            game = TetrisGame(player_id, mode)
-            self.games.append(game)
+            try:
+                if self.debug:
+                    self.debug.log_info(f"Creating TetrisGame for player {player_id}, mode: {mode}", "start_game")
+                game = TetrisGame(player_id, mode)
+                self.games.append(game)
+                if self.debug:
+                    self.debug.log_info(f"TetrisGame created successfully for player {player_id}", "start_game")
+            except Exception as e:
+                if self.debug:
+                    self.debug.log_error(e, f"start_game.create_tetris_game_{player_id}")
+                print(f"[ERROR] Failed to create game for player {player_id}: {e}")
+                # Create a dummy game to maintain list structure
+                game = type('DummyGame', (), {
+                    'mode': PlayerMode.OFF, 
+                    'game_over': True,
+                    'pause': lambda: None,
+                    'resume': lambda: None
+                })()
+                self.games.append(game)
             
             if mode != PlayerMode.OFF:
                 self.active_players.append(player_id)
             
             if mode == PlayerMode.CPU:
-                difficulty = 'medium'  # Could be configurable
-                self.cpu_controllers[player_id] = AdaptiveCPU(difficulty)
+                try:
+                    difficulty = 'medium'  # Could be configurable
+                    if self.debug:
+                        self.debug.log_info(f"Creating CPU controller for player {player_id}, difficulty: {difficulty}", "start_game")
+                    self.cpu_controllers[player_id] = AdaptiveCPU(difficulty)
+                    if self.debug:
+                        self.debug.log_info(f"CPU controller created successfully for player {player_id}", "start_game")
+                except Exception as e:
+                    if self.debug:
+                        self.debug.log_error(e, f"start_game.create_cpu_{player_id}")
+                    print(f"[ERROR] Failed to create CPU for player {player_id}: {e}")
+                    # Continue without CPU controller
         
         # Change state
         self.state = GameState.PLAYING

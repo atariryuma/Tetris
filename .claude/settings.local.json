@@ -5,7 +5,12 @@
       "Bash(sudo apt install:*)",
       "Bash(grep:*)",
       "Bash(uv run:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(.venv/Scripts/python:*)",
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(/usr/bin/python3 -m pip install pygame)",
+      "Bash(uv sync:*)"
     ],
     "deny": []
   }

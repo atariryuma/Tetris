@@ -1,0 +1,18 @@
+23:55:42.762 [INFO] ============================================================
+23:55:42.763 [INFO] 🎮 Tetris Debug Session Started
+23:55:42.763 [INFO] 📁 Log file: bluetooth_debug.log
+23:55:42.764 [INFO] 🕐 Session time: 2025-06-22 23:55:42
+23:55:42.764 [INFO] ============================================================
+23:55:42.764 [INFO] 📊 System Information:
+23:55:42.765 [INFO]    Python: 3.11.13 (main, Jun 12 2025, 12:41:02) [Clang 20.1.4 ]
+23:55:42.765 [INFO]    Platform: linux
+23:55:42.815 [INFO]    Pygame: 2.6.1
+23:55:42.815 [INFO]    SDL: 2.28.4
+23:55:42.815 [INFO]    Available joysticks: 0
+23:55:42.842 [INFO] ℹ️  [0.082s] test_main: Bluetooth controller debug test started
+23:55:42.842 [INFO] ℹ️  [0.083s] test_main: Initializing pygame
+23:55:42.871 [INFO] ℹ️  [0.111s] test_main: Initializing joystick subsystem
+23:55:42.873 [INFO] ℹ️  [0.113s] test_main: Initial controller count: 0
+23:55:42.873 [INFO] ============================================================
+23:55:42.874 [INFO] 🎮 Debug Session Ended (0.1s total)
+23:55:42.874 [INFO] ============================================================
