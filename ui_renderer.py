@@ -21,6 +21,7 @@ class Particle:
         self.color = color
         self.life = life
         self.max_life = life
+        import random
         self.size = random.randint(2, 4)
     
     def update(self, dt: float):

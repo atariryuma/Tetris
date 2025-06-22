@@ -124,11 +124,13 @@ class AudioManager:
     def _generate_tone(self, frequency: float, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate a simple sine wave tone."""
         import math
+        import numpy as np
         
         sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = []
         
+        # Generate mono audio
+        mono_data = []
         for i in range(frames):
             t = i / sample_rate
             wave = math.sin(2 * math.pi * frequency * t) * volume
@@ -137,18 +139,25 @@ class AudioManager:
             wave *= fade
             # Convert to 16-bit integer
             sample = int(wave * 32767)
-            arr.extend([sample, sample])  # Stereo
+            mono_data.append(sample)
         
-        return pygame.sndarray.make_sound(arr)
+        # Convert to stereo 2D array: shape (frames, 2)
+        stereo_array = np.zeros((frames, 2), dtype=np.int16)
+        stereo_array[:, 0] = mono_data  # Left channel
+        stereo_array[:, 1] = mono_data  # Right channel
+        
+        return pygame.sndarray.make_sound(stereo_array)
 
     def _generate_chord(self, frequencies: list, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate a chord with multiple frequencies."""
         import math
+        import numpy as np
         
         sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = []
         
+        # Generate mono audio
+        mono_data = []
         for i in range(frames):
             t = i / sample_rate
             wave = 0
@@ -159,18 +168,25 @@ class AudioManager:
             fade = max(0, 1 - (i / frames) * 1.5)
             wave *= fade
             sample = int(wave * 32767)
-            arr.extend([sample, sample])
+            mono_data.append(sample)
         
-        return pygame.sndarray.make_sound(arr)
+        # Convert to stereo 2D array
+        stereo_array = np.zeros((frames, 2), dtype=np.int16)
+        stereo_array[:, 0] = mono_data  # Left channel
+        stereo_array[:, 1] = mono_data  # Right channel
+        
+        return pygame.sndarray.make_sound(stereo_array)
 
     def _generate_ascending_tone(self, start_freq: float, end_freq: float, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate an ascending tone sweep."""
         import math
+        import numpy as np
         
         sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = []
         
+        # Generate mono audio
+        mono_data = []
         for i in range(frames):
             t = i / sample_rate
             progress = i / frames
@@ -181,18 +197,25 @@ class AudioManager:
             envelope = math.sin(math.pi * progress)
             wave *= envelope
             sample = int(wave * 32767)
-            arr.extend([sample, sample])
+            mono_data.append(sample)
         
-        return pygame.sndarray.make_sound(arr)
+        # Convert to stereo 2D array
+        stereo_array = np.zeros((frames, 2), dtype=np.int16)
+        stereo_array[:, 0] = mono_data  # Left channel
+        stereo_array[:, 1] = mono_data  # Right channel
+        
+        return pygame.sndarray.make_sound(stereo_array)
 
     def _generate_descending_tone(self, start_freq: float, end_freq: float, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate a descending tone sweep."""
         import math
+        import numpy as np
         
         sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = []
         
+        # Generate mono audio
+        mono_data = []
         for i in range(frames):
             t = i / sample_rate
             progress = i / frames
@@ -203,18 +226,25 @@ class AudioManager:
             envelope = 1 - progress * 0.8
             wave *= envelope
             sample = int(wave * 32767)
-            arr.extend([sample, sample])
+            mono_data.append(sample)
         
-        return pygame.sndarray.make_sound(arr)
+        # Convert to stereo 2D array
+        stereo_array = np.zeros((frames, 2), dtype=np.int16)
+        stereo_array[:, 0] = mono_data  # Left channel
+        stereo_array[:, 1] = mono_data  # Right channel
+        
+        return pygame.sndarray.make_sound(stereo_array)
 
     def _generate_noise(self, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate white noise."""
         import random
+        import numpy as np
         
         sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = []
         
+        # Generate mono audio
+        mono_data = []
         for i in range(frames):
             # Generate random noise
             noise = random.uniform(-1, 1) * volume
@@ -224,9 +254,14 @@ class AudioManager:
             noise *= fade
             
             sample = int(noise * 32767)
-            arr.extend([sample, sample])
+            mono_data.append(sample)
         
-        return pygame.sndarray.make_sound(arr)
+        # Convert to stereo 2D array
+        stereo_array = np.zeros((frames, 2), dtype=np.int16)
+        stereo_array[:, 0] = mono_data  # Left channel
+        stereo_array[:, 1] = mono_data  # Right channel
+        
+        return pygame.sndarray.make_sound(stereo_array)
 
     def play_bgm(self, bgm_name: str, loop: bool = True):
         """Play background music with robust error handling."""

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(sudo apt:*)",
       "Bash(sudo apt install:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(uv run:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }
