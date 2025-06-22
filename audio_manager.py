@@ -123,108 +123,109 @@ class AudioManager:
 
     def _generate_tone(self, frequency: float, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate a simple sine wave tone."""
-        import numpy as np
+        import math
         
-        sample_rate = 44100
+        sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = np.zeros((frames, 2))
+        arr = []
         
         for i in range(frames):
             t = i / sample_rate
-            wave = np.sin(2 * np.pi * frequency * t) * volume
+            wave = math.sin(2 * math.pi * frequency * t) * volume
             # Apply fade out
             fade = max(0, 1 - (i / frames) * 2)
             wave *= fade
-            arr[i] = [wave, wave]
+            # Convert to 16-bit integer
+            sample = int(wave * 32767)
+            arr.extend([sample, sample])  # Stereo
         
-        # Convert to pygame sound
-        arr = (arr * 32767).astype(np.int16)
         return pygame.sndarray.make_sound(arr)
 
     def _generate_chord(self, frequencies: list, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate a chord with multiple frequencies."""
-        import numpy as np
+        import math
         
-        sample_rate = 44100
+        sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = np.zeros((frames, 2))
+        arr = []
         
         for i in range(frames):
             t = i / sample_rate
             wave = 0
             for freq in frequencies:
-                wave += np.sin(2 * np.pi * freq * t) * volume / len(frequencies)
+                wave += math.sin(2 * math.pi * freq * t) * volume / len(frequencies)
             
             # Apply fade out
             fade = max(0, 1 - (i / frames) * 1.5)
             wave *= fade
-            arr[i] = [wave, wave]
+            sample = int(wave * 32767)
+            arr.extend([sample, sample])
         
-        # Convert to pygame sound
-        arr = (arr * 32767).astype(np.int16)
         return pygame.sndarray.make_sound(arr)
 
     def _generate_ascending_tone(self, start_freq: float, end_freq: float, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate an ascending tone sweep."""
-        import numpy as np
+        import math
         
-        sample_rate = 44100
+        sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = np.zeros((frames, 2))
+        arr = []
         
         for i in range(frames):
             t = i / sample_rate
             progress = i / frames
             frequency = start_freq + (end_freq - start_freq) * progress
-            wave = np.sin(2 * np.pi * frequency * t) * volume
+            wave = math.sin(2 * math.pi * frequency * t) * volume
             
             # Apply envelope
-            envelope = np.sin(np.pi * progress)
+            envelope = math.sin(math.pi * progress)
             wave *= envelope
-            arr[i] = [wave, wave]
+            sample = int(wave * 32767)
+            arr.extend([sample, sample])
         
-        # Convert to pygame sound
-        arr = (arr * 32767).astype(np.int16)
         return pygame.sndarray.make_sound(arr)
 
     def _generate_descending_tone(self, start_freq: float, end_freq: float, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate a descending tone sweep."""
-        import numpy as np
+        import math
         
-        sample_rate = 44100
+        sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = np.zeros((frames, 2))
+        arr = []
         
         for i in range(frames):
             t = i / sample_rate
             progress = i / frames
             frequency = start_freq + (end_freq - start_freq) * progress
-            wave = np.sin(2 * np.pi * frequency * t) * volume
+            wave = math.sin(2 * math.pi * frequency * t) * volume
             
             # Apply envelope
             envelope = 1 - progress * 0.8
             wave *= envelope
-            arr[i] = [wave, wave]
+            sample = int(wave * 32767)
+            arr.extend([sample, sample])
         
-        # Convert to pygame sound
-        arr = (arr * 32767).astype(np.int16)
         return pygame.sndarray.make_sound(arr)
 
     def _generate_noise(self, duration: float, volume: float) -> pygame.mixer.Sound:
         """Generate white noise."""
-        import numpy as np
+        import random
         
-        sample_rate = 44100
+        sample_rate = 22050
         frames = int(duration * sample_rate)
-        arr = np.random.uniform(-1, 1, (frames, 2)) * volume
+        arr = []
         
-        # Apply fade out
         for i in range(frames):
+            # Generate random noise
+            noise = random.uniform(-1, 1) * volume
+            
+            # Apply fade out
             fade = max(0, 1 - (i / frames) * 3)
-            arr[i] *= fade
+            noise *= fade
+            
+            sample = int(noise * 32767)
+            arr.extend([sample, sample])
         
-        # Convert to pygame sound
-        arr = (arr * 32767).astype(np.int16)
         return pygame.sndarray.make_sound(arr)
 
     def play_bgm(self, bgm_name: str, loop: bool = True):

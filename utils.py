@@ -16,7 +16,15 @@ def safe_events():
     try:
         # Ensure SDL processes internal actions before fetching events.
         pygame.event.pump()
-        return pygame.event.get()
+        events = pygame.event.get()
+        return events
+    except SystemError as e:
+        # Handle Joy-Con controller crashes specifically
+        if "exception set" in str(e):
+            print("[WARN] Controller crash detected - continuing without events")
+            return []
+        else:
+            raise
     except Exception as e:
         print(f"[WARN] Event polling error: {e}")
         return []

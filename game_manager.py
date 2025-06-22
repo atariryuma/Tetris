@@ -61,28 +61,55 @@ class GameManager:
         
         clock = pygame.time.Clock()
         self.running = True
+        frame_count = 0
+        last_update_time = time.time()
         
         while self.running:
             current_time = time.time()
             delta_time = current_time - self.last_time
             self.last_time = current_time
             
+            # Safety check for hung loops
+            if current_time - last_update_time > 5.0:  # 5 second timeout
+                print("[WARN] Game loop may be hanging - continuing...")
+                last_update_time = current_time
+            
             # Reset just_pressed keys each frame
             self.keys_just_pressed = {}
 
-            # Process all pending events
-            self.handle_events()
-            
-            # Game update and render calls
-            self.update(delta_time)
-            self.draw(self.screen)
-            
+            try:
+                # Process all pending events
+                self.handle_events()
+                
+                # Game update and render calls
+                self.update(delta_time)
+                self.draw(self.screen)
+                
+                # Display update
+                pygame.display.flip()
+                
+            except Exception as e:
+                print(f"[ERROR] Game loop error: {e}")
+                # Continue rather than crash
+                
             # Maintain target FPS
-            clock.tick(FPS)
+            try:
+                clock.tick(FPS)
+            except Exception:
+                time.sleep(1.0 / FPS)  # Fallback timing
+            
+            frame_count += 1
+            if frame_count % 300 == 0:  # Every 5 seconds at 60 FPS
+                print(f"Game running: frame {frame_count}, state: {self.state}")
         
         # Cleanup
-        self.audio_manager.cleanup()
-        pygame.quit()
+        print("Game ending, cleaning up...")
+        try:
+            self.audio_manager.cleanup()
+        except Exception as e:
+            print(f"Audio cleanup error: {e}")
+        
+        print("Game ended successfully")
 
     def handle_events(self):
         """Process all pending pygame events safely."""
@@ -450,8 +477,6 @@ class GameManager:
         # Debug info
         if DEBUG_CONTROLLERS:
             self.draw_debug_info(screen)
-        
-        pygame.display.flip()
     
     def draw_debug_info(self, screen):
         """Draw debug information."""

@@ -195,6 +195,6 @@ class PlayerMode:
     OFF = 'off'
 
 # Debug settings
-DEBUG_CONTROLLERS = False
-DEBUG_PRINT = False
+DEBUG_CONTROLLERS = True
+DEBUG_PRINT = True
 DEBUG_SHOW_GHOST = True

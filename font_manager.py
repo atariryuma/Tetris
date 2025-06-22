@@ -40,11 +40,9 @@ class FontManager:
         for font_name, font_path in self.font_paths.items():
             if os.path.exists(font_path):
                 available_fonts[font_name] = font_path
-                if DEBUG_PRINT:
-                    print(f"Font available: {font_name}")
+                print(f"✓ Font available: {font_name}")
             else:
-                if DEBUG_PRINT:
-                    print(f"Font missing: {font_name} at {font_path}")
+                print(f"⚠ Font missing: {font_name} at {font_path}")
         
         self.font_paths = available_fonts
     
