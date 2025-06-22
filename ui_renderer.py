@@ -201,7 +201,7 @@ class UIRenderer:
         controls_y = self.screen_height - 80
         controls = [
             "矢印キー: 移動・選択  Z/X: 回転  Enter: 決定  ESC: 一時停止",
-            "ゲームパッド対応: Xbox, PlayStation, Nintendo Switch Pro"
+            "ゲームパッド対応: Xbox One コントローラーのみ"
         ]
         
         for i, control_text in enumerate(controls):
