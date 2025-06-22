@@ -38,7 +38,7 @@ class UniversalGamepadMapper:
     
     def __init__(self):
         self.controller_mappings = {
-            # Xbox One Controller mapping only
+            # Xbox One Controller mapping
             'xbox': {
                 'buttons': {
                     0: Action.ROTATE_CW,      # A
@@ -57,6 +57,69 @@ class UniversalGamepadMapper:
                 'axes': {
                     0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),  # Left stick X
                     1: (Action.MENU_UP, Action.SOFT_DROP),     # Left stick Y
+                }
+            },
+            # PlayStation DualShock/DualSense mapping
+            'playstation': {
+                'buttons': {
+                    0: Action.HOLD,          # Square
+                    1: Action.ROTATE_CW,     # Cross
+                    2: Action.ROTATE_CCW,    # Circle
+                    3: Action.HARD_DROP,     # Triangle
+                    4: Action.ROTATE_CCW,    # L1
+                    5: Action.ROTATE_CW,     # R1
+                    8: Action.MENU_BACK,     # Share
+                    9: Action.PAUSE,         # Options
+                    11: Action.MENU_UP,      # D-pad Up
+                    12: Action.MENU_DOWN,    # D-pad Down
+                    13: Action.MENU_LEFT,    # D-pad Left
+                    14: Action.MENU_RIGHT,   # D-pad Right
+                },
+                'axes': {
+                    0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),  # Left stick X
+                    1: (Action.MENU_UP, Action.SOFT_DROP),     # Left stick Y
+                }
+            },
+            # Nintendo Switch Pro Controller mapping
+            'switch': {
+                'buttons': {
+                    0: Action.ROTATE_CW,      # B
+                    1: Action.ROTATE_CCW,     # A
+                    2: Action.HOLD,           # Y
+                    3: Action.HARD_DROP,      # X
+                    4: Action.ROTATE_CCW,     # L
+                    5: Action.ROTATE_CW,      # R
+                    8: Action.MENU_BACK,      # -
+                    9: Action.PAUSE,          # +
+                    10: Action.MENU_UP,       # D-pad Up
+                    11: Action.MENU_DOWN,     # D-pad Down
+                    12: Action.MENU_LEFT,     # D-pad Left
+                    13: Action.MENU_RIGHT,    # D-pad Right
+                },
+                'axes': {
+                    0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),
+                    1: (Action.MENU_UP, Action.SOFT_DROP),
+                }
+            },
+            # Generic controllers fall back to Xbox layout
+            'generic': {
+                'buttons': {
+                    0: Action.ROTATE_CW,
+                    1: Action.ROTATE_CCW,
+                    2: Action.HOLD,
+                    3: Action.HARD_DROP,
+                    4: Action.ROTATE_CCW,
+                    5: Action.ROTATE_CW,
+                    6: Action.MENU_BACK,
+                    7: Action.PAUSE,
+                    11: Action.MENU_UP,
+                    12: Action.MENU_DOWN,
+                    13: Action.MENU_LEFT,
+                    14: Action.MENU_RIGHT,
+                },
+                'axes': {
+                    0: (Action.MOVE_LEFT, Action.MOVE_RIGHT),
+                    1: (Action.MENU_UP, Action.SOFT_DROP),
                 }
             }
         }
@@ -99,8 +162,12 @@ class UniversalGamepadMapper:
 
         if any(keyword in name_lower for keyword in ['xbox', '045e', 'microsoft']):
             return 'xbox'
+        elif any(keyword in name_lower for keyword in ['playstation', 'dualshock', 'dualsense', 'sony']):
+            return 'playstation'
+        elif any(keyword in name_lower for keyword in ['switch', 'nintendo']):
+            return 'switch'
         else:
-            return 'unsupported'
+            return 'generic'
 
     def get_mapping(self, controller_type: str) -> Dict:
         """Get button/axis mapping for controller type."""
@@ -162,14 +229,9 @@ class GamepadManager:
                         joystick = pygame.joystick.Joystick(i)
                         joystick.init()
                         ctype = self.mapper.detect_controller_type(joystick.get_name())
-                        if ctype != 'xbox':
-                            if DEBUG_CONTROLLERS:
-                                print(f"Unsupported controller ignored: {joystick.get_name()}")
-                            joystick.quit()
-                            continue
                         self.joysticks[i] = joystick
                         if DEBUG_CONTROLLERS:
-                            print(f"Controller {i} connected: {joystick.get_name()}")
+                            print(f"Controller {i} connected: {joystick.get_name()} [{ctype}]")
                     except (pygame.error, SystemError, OSError) as e:
                         if DEBUG_CONTROLLERS:
                             print(f"Failed to initialize controller {i}: {e}")

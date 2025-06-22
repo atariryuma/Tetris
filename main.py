@@ -60,8 +60,8 @@ def main():
     print("- F1: Show volume info")
     print("- F2/F3: Adjust master volume")
     print("\nGamepad support:")
-    print("- Xbox One controller only")
-    print("- Plug in controller before or during play")
+    print("- Works with Xbox, PlayStation, Switch Pro and most generic controllers")
+    print("- Plug in controllers before or during play")
 
     # BGM安全読み込み
     bgm_path = os.path.join(os.path.dirname(__file__), 'assets', 'sounds', 'menu_music.ogg')
